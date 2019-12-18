@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/payfazz/commerce-kit/internal/notif"
+	"github.com/payfazz/commerce-kit/notif"
 	validator "gopkg.in/go-playground/validator.v9"
 )
 

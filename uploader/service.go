@@ -14,9 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
-	"github.com/payfazz/shopfazz-inventory/internal/appcontext"
-	"github.com/payfazz/shopfazz-inventory/internal/logperform"
-	"github.com/payfazz/shopfazz-inventory/internal/types"
+	"github.com/payfazz/shopfazz-inventory/appcontext"
+	"github.com/payfazz/shopfazz-inventory/logperform"
+	"github.com/payfazz/shopfazz-inventory/types"
 
 	"github.com/google/go-cloud/blob"
 	"github.com/google/go-cloud/blob/gcsblob"

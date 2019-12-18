@@ -3,7 +3,7 @@ package uploader
 import (
 	"context"
 
-	"github.com/payfazz/shopfazz-inventory/internal/types"
+	"github.com/payfazz/shopfazz-inventory/types"
 )
 
 // File represents url of uploaded file

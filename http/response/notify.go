@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/payfazz/commerce-kit/internal/notif"
+	"github.com/payfazz/commerce-kit/notif"
 )
 
 // Notification represents message

@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/payfazz/commerce-kit/internal/notif"
+	"github.com/payfazz/commerce-kit/notif"
 	"github.com/pkg/errors"
 )
 
