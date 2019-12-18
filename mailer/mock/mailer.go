@@ -3,7 +3,7 @@ package mock
 import (
 	"fmt"
 
-	"github.com/payfazz/shopfazz-inventory/mailer"
+	"github.com/payfazz/commerce-kit/mailer"
 )
 
 // Mailer TODO: comment

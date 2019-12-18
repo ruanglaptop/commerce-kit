@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
-	"github.com/payfazz/shopfazz-inventory/mailer"
+	"github.com/payfazz/commerce-kit/mailer"
 )
 
 // Mailer TODO: comment
