@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/payfazz/commerce-kit/internal/notif"
-	"github.com/payfazz/commerce-kit/internal/types"
+	"github.com/payfazz/commerce-kit/notif"
+	"github.com/payfazz/commerce-kit/types"
 	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/pkg/errors"
