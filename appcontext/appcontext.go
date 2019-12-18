@@ -16,6 +16,9 @@ const (
 	// KeySessionID represents the current logged-in SessionID
 	KeySessionID contextKey = "SessionID"
 
+	//KeyWarehouseIDs represents the list access of warehouseId
+	KeyWarehouseIDs contextKey = "WarehouseIDs"
+
 	// KeyCurrentAccount represents the CurrentAccountId key in http server context
 	KeyCurrentAccount contextKey = "CurrentAccount"
 
@@ -261,6 +264,16 @@ func RequestBody(ctx context.Context) interface{} {
 	requestBody := ctx.Value(KeyRequestBody)
 	if requestBody != nil {
 		v := requestBody.(interface{})
+		return v
+	}
+	return nil
+}
+
+// WarehouseIDs gets current list warehouse id access
+func WarehouseIDs(ctx context.Context) []*int {
+	warehouseIDs := ctx.Value(KeyWarehouseIDs)
+	if warehouseIDs != nil {
+		v := warehouseIDs.([]*int)
 		return v
 	}
 	return nil
