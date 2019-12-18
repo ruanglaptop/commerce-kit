@@ -27,8 +27,19 @@ type ClientRequestLog struct {
 	HTTPStatusCode int            `json:"httpStatusCode" db:"httpStatusCode"`
 }
 
+// FindAllClientRequestLogs represents params to get All Client Request Logs
+// swagger:model
+type FindAllClientRequestLogs struct {
+	Search string `json:"search"`
+	Page   int    `json:"page"`
+	Limit  int    `json:"limit"`
+}
+
 // ClientRequestLogStorage represents the interface for manage client request log object
 type ClientRequestLogStorage interface {
+	FindAll(ctx context.Context, params *FindAllClientRequestLogs) ([]*ClientRequestLog, *types.Error)
+	FindByID(ctx context.Context, clientRequestLogID int) (*ClientRequestLog, *types.Error)
 	Insert(ctx context.Context, clientRequestLog *ClientRequestLog) (*ClientRequestLog, *types.Error)
 	Update(ctx context.Context, clientRequestLog *ClientRequestLog) (*ClientRequestLog, *types.Error)
+	Delete(ctx context.Context, clientRequestLogID int) *types.Error
 }
