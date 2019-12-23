@@ -210,6 +210,19 @@ func (r *PostgresStorage) FindAll(ctx context.Context, elems interface{}, page i
 	return nil
 }
 
+func interfaceConversion(i interface{}) (map[string]interface{}, error) {
+	resJSON, err := json.Marshal(i)
+	if err != nil {
+		return nil, err
+	}
+	var res map[string]interface{}
+	err = json.Unmarshal(resJSON, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+	
+}
 // Insert inserts a new element into the database.
 // It assumes the primary key of the table is "id" with serial type.
 // It will set the "owner" field of the element with the current account in the context if exists.
@@ -242,12 +255,18 @@ func (r *PostgresStorage) Insert(ctx context.Context, elem interface{}) error {
 	elemID := r.findID(elem)
 	now := time.Now()
 
+	valueAfter, err := interfaceConversion(elem)
+	if err != nil {
+		return err
+	}
 	err = r.createLog(ctx, &ActivityLog{
 		UserID:          currentUserID,
 		UserType:        currentUserType,
 		TableName:       r.tableName,
 		ReferenceID:     elemID.(int),
 		Metadata:        map[string]interface{}{},
+		ValueBefore:	 nil,
+		ValueAfter:		 valueAfter,
 		TransactionTime: &now,
 		TransactionType: "Insert",
 	})
@@ -590,12 +609,24 @@ func (r *PostgresStorage) Update(ctx context.Context, elem interface{}) error {
 	}
 	now := time.Now()
 
+
+	valueBefore, err := interfaceConversion(existingElem)
+	if err != nil {
+		return err
+	}
+	valueAfter, err := interfaceConversion(elem)
+	if err != nil {
+		return err
+	}
+
 	err = r.createLog(ctx, &ActivityLog{
 		UserID:          currentUserID,
 		UserType:        currentUserType,
 		TableName:       r.tableName,
 		ReferenceID:     elemID.(int),
 		Metadata:        map[string]interface{}{},
+		ValueBefore:	 valueBefore,
+		ValueAfter:		 valueAfter,
 		TransactionTime: &now,
 		TransactionType: "Update",
 	})
@@ -673,19 +704,33 @@ func (r *PostgresStorage) Delete(ctx context.Context, id interface{}) error {
 	now := time.Now()
 	currentUserID, currentUserType := determineUser(ctx)
 
+	var elem interface{}
+	err = statement.Get(elem, deleteArgs)
+	if err != nil {
+		return err
+	}
+
+	valueBefore, err := interfaceConversion(elem)
+	if err != nil {
+		return err
+	}
+
 	err = r.createLog(ctx, &ActivityLog{
 		UserID:          currentUserID,
 		UserType:        currentUserType,
 		TableName:       r.tableName,
 		ReferenceID:     id.(int),
 		Metadata:        map[string]interface{}{},
+		ValueBefore:	 valueBefore,
+		ValueAfter:		 nil,
 		TransactionTime: &now,
 		TransactionType: "Delete",
 	})
-	_, err = statement.Exec(deleteArgs)
 	if err != nil {
 		return err
 	}
+
+	
 	return nil
 }
 
@@ -758,6 +803,8 @@ type ActivityLog struct {
 	TableName       string                 `db:"tableName"`
 	ReferenceID     int                    `db:"referenceId"`
 	Metadata        map[string]interface{} `db:"metadata"`
+	ValueBefore		map[string]interface{} `db:"valueBefore"`
+	ValueAfter		map[string]interface{} `db:"valueAfter"`
 	TransactionTime *time.Time             `db:"transactionTime"`
 	TransactionType string                 `db:"transactionType"`
 	CreatedAt       *time.Time             `db:"createdAt"`
