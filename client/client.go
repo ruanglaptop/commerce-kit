@@ -516,6 +516,7 @@ func NewHTTPClient(
 		AuthorizationTypes:        config.AuthorizationTypes,
 		clientRequestLogStorage:   clientRequestLogStorage,
 		acknowledgeRequestService: acknowledgeRequestService,
+		ClientName:                config.ClientName,
 	}
 }
 
