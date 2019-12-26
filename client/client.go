@@ -224,7 +224,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 
 	clientID, clientType := determineClient(ctx)
 	requestRaw := types.Metadata{}
-	if request != nil {
+	if request != nil && request != "" {
 		err = json.Unmarshal(jsonData, &requestRaw)
 		if err != nil {
 			errDo = &ResponseError{
