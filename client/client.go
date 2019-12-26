@@ -76,6 +76,7 @@ type GenericHTTPClient interface {
 	Do(req *http.Request) (string, *ResponseError)
 	CallClient(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCircuitBreaker(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithoutLog(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	AddAuthentication(ctx context.Context, authorizationType AuthorizationType)
 }
 
@@ -260,19 +261,20 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 	}
 
 	response, errDo = c.Do(req)
-	if errDo != nil && (errDo.Error != nil || errDo.Message != "") && method != GET {
-		clientRequestLog.HTTPStatusCode = errDo.StatusCode
-		clientRequestLog.Status = "failed"
-		clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Update(backgroundContext, clientRequestLog)
-		if errClientRequestLog != nil {
-			if errClientRequestLog.Error != nil {
-				errDo = &ResponseError{
-					Error: errClientRequestLog.Error,
+	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		if method != GET {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+			clientRequestLog.Status = "failed"
+			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Update(backgroundContext, clientRequestLog)
+			if errClientRequestLog != nil {
+				if errClientRequestLog.Error != nil {
+					errDo = &ResponseError{
+						Error: errClientRequestLog.Error,
+					}
+					return errDo
 				}
-				return errDo
 			}
 		}
-
 		return errDo
 	}
 
@@ -485,6 +487,64 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 		}
 		return nil
 	}, nil)
+
+	return errDo
+}
+
+// CallClientWithoutLog do call client without log
+func (c *HTTPClient) CallClientWithoutLog(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+	var jsonData []byte
+	var err error
+	var response string
+	var errDo *ResponseError
+
+	if request != nil && request != "" {
+		jsonData, err = json.Marshal(request)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	req, err := http.NewRequest(string(method), urlPath.String(), bytes.NewBuffer(jsonData))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType.HeaderTypeValue != "" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	response, errDo = c.Do(req)
+	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		return errDo
+	}
+
+	if response != "" {
+		err = json.Unmarshal([]byte(response), result)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
 
 	return errDo
 }
