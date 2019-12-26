@@ -189,7 +189,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 	var response string
 	var errDo *ResponseError
 
-	if request != nil {
+	if request != nil && request != "" {
 		jsonData, err = json.Marshal(request)
 		if err != nil {
 			errDo = &ResponseError{
