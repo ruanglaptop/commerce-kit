@@ -571,6 +571,27 @@ func renamingKey(m map[string]interface{}, add string) map[string]interface{} {
 	return newMap
 }
 
+func (r *PostgresStorage) findChanges(existingElem interface{}, elem interface{}) map[string]interface{} {
+	diff := map[string]interface{}{}
+	ev := reflect.ValueOf(existingElem).Elem()
+	v := reflect.ValueOf(elem).Elem()	
+	for i := 0 ; i < ev.NumField(); i++ {
+		dbTag := r.elemType.Field(i).Tag.Get("db")
+		if !readOnlyTag(dbTag) && !emptyTag(dbTag) {
+			val1 := ev.Field(i).Interface()
+			val2 := v.Field(i).Interface()
+			if !reflect.DeepEqual(val1, val2) {
+				
+				singleDiff := make([]interface{}, 2)
+				singleDiff[0] = val1
+				singleDiff[1] = val2
+				diff[dbTag] = singleDiff
+			}
+		}
+	}
+	return diff
+}
+
 // Update updates the element in the database.
 // It will update the "updatedAt" field.
 func (r *PostgresStorage) Update(ctx context.Context, elem interface{}) error {
@@ -624,7 +645,7 @@ func (r *PostgresStorage) Update(ctx context.Context, elem interface{}) error {
 		UserType:        currentUserType,
 		TableName:       r.tableName,
 		ReferenceID:     elemID.(int),
-		Metadata:        map[string]interface{}{},
+		Metadata:        r.findChanges(existingElem, elem),
 		ValueBefore:	 valueBefore,
 		ValueAfter:		 valueAfter,
 		TransactionTime: &now,
@@ -648,6 +669,8 @@ func (r *PostgresStorage) findID(elem interface{}) interface{} {
 	}
 	return nil
 }
+
+
 
 func (r *PostgresStorage) updateArgs(currentUserID int, existingElem interface{}, elem interface{}) map[string]interface{} {
 	res := map[string]interface{}{
