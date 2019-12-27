@@ -23,6 +23,7 @@ func (m *Manager) RunInTransaction(ctx context.Context, f func(tctx context.Cont
 	}
 
 	ctx = NewContext(ctx, tx)
+	m.acknowledgeService.Prepare(ctx)
 	err = f(ctx)
 	if err != nil {
 		tx.Rollback()

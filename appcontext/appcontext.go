@@ -69,6 +69,9 @@ const (
 
 	// KeyRequestBody represents the body of the request
 	KeyRequestBody contextKey = "KeyRequestBody"
+
+	// KeyRequestReferenceID represents the the reference id of a specific request
+	KeyRequestReferenceID contextKey = "KeyRequestReferenceID"
 )
 
 // Owner gets the data owner from the context
@@ -277,4 +280,14 @@ func WarehouseIDs(ctx context.Context) []*int {
 		return v
 	}
 	return nil
+}
+
+// RequestReferenceID gets current reference request id
+func RequestReferenceID(ctx context.Context) int {
+	requestReferenceID := ctx.Value(KeyRequestReferenceID)
+	if requestReferenceID != nil {
+		v := requestReferenceID.(int)
+		return v
+	}
+	return 0
 }

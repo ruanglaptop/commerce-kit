@@ -238,6 +238,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 	var clientRequestLog *ClientRequestLog
 	var errClientRequestLog *types.Error
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
 		clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Insert(backgroundContext, &ClientRequestLog{
@@ -249,6 +250,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 			Request:        requestRaw,
 			Status:         "calling",
 			HTTPStatusCode: 0,
+			ReferenceID:    requestReferenceID,
 		})
 		if errClientRequestLog != nil {
 			if errClientRequestLog.Error != nil {
@@ -392,6 +394,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 		var clientRequestLog *ClientRequestLog
 		var errClientRequestLog *types.Error
 		tempCurrentAccount := appcontext.CurrentAccount(ctx)
+		requestReferenceID := appcontext.RequestReferenceID(ctx)
 		backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 		if method != GET {
 			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Insert(backgroundContext, &ClientRequestLog{
@@ -403,6 +406,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 				Request:        requestRaw,
 				Status:         "calling",
 				HTTPStatusCode: 0,
+				ReferenceID:    requestReferenceID,
 			})
 			if errClientRequestLog != nil {
 				if errClientRequestLog.Error != nil {
