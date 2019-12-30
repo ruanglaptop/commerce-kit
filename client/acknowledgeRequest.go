@@ -41,7 +41,7 @@ type AcknowledgeRequestStorage interface {
 // AcknowledgeRequestServiceInterface represents an interface segreggation to encapsulate object of AcknowledgeRequest to control commit
 type AcknowledgeRequestServiceInterface interface {
 	Acknowledge(ctx context.Context, status string, message string) error
-	Prepare(ctx context.Context) error
+	Prepare(ctx *context.Context) error
 	Create(ctx context.Context, acknowledgeRequest *AcknowledgeRequest) error
 }
 

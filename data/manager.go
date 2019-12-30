@@ -23,7 +23,7 @@ func (m *Manager) RunInTransaction(ctx context.Context, f func(tctx context.Cont
 	}
 
 	ctx = NewContext(ctx, tx)
-	err = m.acknowledgeService.Prepare(ctx)
+	err = m.acknowledgeService.Prepare(&ctx)
 	if err != nil {
 		fmt.Printf("\n[Commerce-Kit - RunInTransaction - Prepare] Error: %v\n", err)
 	}
