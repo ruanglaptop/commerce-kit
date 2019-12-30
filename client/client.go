@@ -325,7 +325,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		}
 	}
 
-	if response != "" {
+	if response != "" && result != nil {
 		err = json.Unmarshal([]byte(response), result)
 		if err != nil {
 			errDo = &ResponseError{
