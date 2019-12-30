@@ -124,6 +124,7 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx context.Context, status stri
 		return err.Error
 	}
 
+	currentRequest.ReferenceID = requestReferenceID
 	currentRequest.Status = status
 	_, err = s.clientRequestLog.Update(ctx, currentRequest)
 	if err != nil {
