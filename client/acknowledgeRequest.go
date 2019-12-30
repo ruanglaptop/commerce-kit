@@ -41,7 +41,7 @@ type AcknowledgeRequestStorage interface {
 // AcknowledgeRequestServiceInterface represents an interface segreggation to encapsulate object of AcknowledgeRequest to control commit
 type AcknowledgeRequestServiceInterface interface {
 	Acknowledge(ctx *context.Context, status string, message string) error
-	Prepare(ctx **context.Context) error
+	Prepare(ctx *context.Context) error
 	Create(ctx *context.Context, acknowledgeRequest *AcknowledgeRequest) error
 }
 
@@ -61,25 +61,25 @@ func (s *AcknowledgeRequestService) Create(ctx *context.Context, acknowledgeRequ
 }
 
 // Prepare store request log to this services before starting run in transaction
-func (s *AcknowledgeRequestService) Prepare(ctx **context.Context) error {
+func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 	// write request log to this service
-	clientID, clientType := determineClient(*ctx)
+	clientID, clientType := determineClient(ctx)
 
 	methodName := ""
-	tMethodName := appcontext.HTTPMethodName(*ctx)
+	tMethodName := appcontext.HTTPMethodName(ctx)
 	if tMethodName != nil {
 		methodName = *tMethodName
 	}
 
 	urlPath := ""
-	tURLPath := appcontext.URLPath(*ctx)
+	tURLPath := appcontext.URLPath(ctx)
 	if tURLPath != nil {
 		urlPath = *tURLPath
 	}
 
 	requestRaw := types.Metadata{}
-	if appcontext.RequestBody(*ctx) != nil {
-		jsonData, err := json.Marshal(appcontext.RequestBody(*ctx))
+	if appcontext.RequestBody(ctx) != nil {
+		jsonData, err := json.Marshal(appcontext.RequestBody(ctx))
 		if err != nil {
 			return err
 		}
@@ -90,14 +90,14 @@ func (s *AcknowledgeRequestService) Prepare(ctx **context.Context) error {
 		}
 	}
 
-	tempCurrentAccount := appcontext.CurrentAccount(*ctx)
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
-	result, errClientRequestLog := s.clientRequestLog.Insert(backgroundContext, &ClientRequestLog{
+	result, errClientRequestLog := s.clientRequestLog.Insert(&backgroundContext, &ClientRequestLog{
 		ClientID:       clientID,
 		ClientType:     clientType,
 		Method:         methodName,
 		URL:            urlPath,
-		Header:         appcontext.RequestHeader(*ctx),
+		Header:         appcontext.RequestHeader(ctx),
 		Request:        requestRaw,
 		Status:         "called",
 		HTTPStatusCode: 200,
@@ -114,7 +114,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx **context.Context) error {
 
 // Acknowledge broadcast status (rollback if failed and commit if succeed) request to all request had been sent before
 func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status string, message string) error {
-	ctx = context.WithValue(ctx, appcontext.KeyRequestStatus, status)
+	*ctx = context.WithValue(*ctx, appcontext.KeyRequestStatus, status)
 	clientRequests := []*ClientRequest{}
 	temp := appcontext.ClientRequests(ctx)
 	if temp != nil {
@@ -124,14 +124,14 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status str
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
-	currentRequest, err := s.clientRequestLog.FindByID(backgroundContext, requestReferenceID)
+	currentRequest, err := s.clientRequestLog.FindByID(&backgroundContext, requestReferenceID)
 	if err != nil {
 		return err.Error
 	}
 
 	currentRequest.ReferenceID = requestReferenceID
 	currentRequest.Status = status
-	_, err = s.clientRequestLog.Update(backgroundContext, currentRequest)
+	_, err = s.clientRequestLog.Update(&backgroundContext, currentRequest)
 	if err != nil {
 		return err.Error
 	}
@@ -139,7 +139,7 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status str
 	for _, clientRequest := range clientRequests {
 		// acknowledge client to commit / rollback
 		responseError := clientRequest.Client.CallClient(
-			&ctx,
+			ctx,
 			fmt.Sprintf("%s?s=%s", clientRequest.Request.URL, status),
 			Method(clientRequest.Request.Method),
 			clientRequest.Request.Request,
@@ -152,7 +152,7 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status str
 		}
 
 		// ignore when error occurs
-		_ = s.Create(backgroundContext, &AcknowledgeRequest{
+		_ = s.Create(&backgroundContext, &AcknowledgeRequest{
 			RequestID:          clientRequest.Request.ID,
 			CommitStatus:       status,
 			ReservedHolder:     clientRequest.Request.Request,

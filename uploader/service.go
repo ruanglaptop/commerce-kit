@@ -110,7 +110,7 @@ func (s *Service) doUpload(ctx *context.Context, fileBytes []byte, url string) *
 		req.ACL = aws.String("public-read")
 		return nil
 	}
-	bw, err := s.bucket.NewWriter(ctx, url, &blob.WriterOptions{
+	bw, err := s.bucket.NewWriter(*ctx, url, &blob.WriterOptions{
 		BeforeWrite: before,
 	})
 	if err != nil {
@@ -208,7 +208,7 @@ func setupGCP(ctx *context.Context, bucket string) (*blob.Bucket, error) {
 	// DefaultCredentials assumes a user has logged in with gcloud.
 	// See here for more information:
 	// https://cloud.google.com/docs/authentication/getting-started
-	creds, err := gcp.DefaultCredentials(ctx)
+	creds, err := gcp.DefaultCredentials(*ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func setupGCP(ctx *context.Context, bucket string) (*blob.Bucket, error) {
 		return nil, err
 	}
 	// The bucket name must be globally unique.
-	return gcsblob.OpenBucket(ctx, bucket, c, nil)
+	return gcsblob.OpenBucket(*ctx, bucket, c, nil)
 }
 
 // setupAWS setupAWS return bucket
@@ -237,5 +237,5 @@ func setupAWS(ctx *context.Context, config *ConfigParams) (*blob.Bucket, error) 
 		),
 	}
 	s := session.Must(session.NewSession(c))
-	return s3blob.OpenBucket(ctx, config.Bucket, s, nil)
+	return s3blob.OpenBucket(*ctx, config.Bucket, s, nil)
 }
