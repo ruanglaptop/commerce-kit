@@ -54,7 +54,10 @@ type AcknowledgeRequestService struct {
 // Create Create log to store the request which needed to be acknowledged
 func (s *AcknowledgeRequestService) Create(ctx context.Context, acknowledgeRequest *AcknowledgeRequest) error {
 	_, err := s.acknowledgeRequestStorage.Insert(ctx, acknowledgeRequest)
-	return err.Error
+	if err != nil {
+		return err.Error
+	}
+	return nil
 }
 
 // Prepare store request log to this services before starting run in transaction
