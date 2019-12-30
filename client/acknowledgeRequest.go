@@ -140,7 +140,7 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx context.Context, status stri
 		// acknowledge client to commit / rollback
 		var responseResult types.Metadata
 		responseError := clientRequest.Client.CallClient(
-			ctx,
+			&ctx,
 			fmt.Sprintf("%s?s=%s", clientRequest.Request.URL, status),
 			Method(clientRequest.Request.Method),
 			clientRequest.Request.Request,
