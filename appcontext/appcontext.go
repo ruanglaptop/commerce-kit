@@ -76,7 +76,7 @@ const (
 
 // Owner gets the data owner from the context
 func Owner(ctx *context.Context) *int {
-	owner := ctx.Value(KeyOwner)
+	owner := *ctx.Value(KeyOwner)
 	if owner != nil {
 		v := owner.(int)
 		return &v
@@ -86,7 +86,7 @@ func Owner(ctx *context.Context) *int {
 
 // URLPath gets the data url path from the context
 func URLPath(ctx *context.Context) *string {
-	urlPath := ctx.Value(KeyURLPath)
+	urlPath := *ctx.Value(KeyURLPath)
 	if urlPath != nil {
 		v := urlPath.(string)
 		return &v
@@ -96,7 +96,7 @@ func URLPath(ctx *context.Context) *string {
 
 // HTTPMethodName gets the data http method from the context
 func HTTPMethodName(ctx *context.Context) *string {
-	httpMethodName := ctx.Value(KeyHTTPMethodName)
+	httpMethodName := *ctx.Value(KeyHTTPMethodName)
 	if httpMethodName != nil {
 		v := httpMethodName.(string)
 		return &v
@@ -106,7 +106,7 @@ func HTTPMethodName(ctx *context.Context) *string {
 
 // SessionID gets the data session id from the context
 func SessionID(ctx *context.Context) *string {
-	sessionID := ctx.Value(KeySessionID)
+	sessionID := *ctx.Value(KeySessionID)
 	if sessionID != nil {
 		v := sessionID.(string)
 		return &v
@@ -116,7 +116,7 @@ func SessionID(ctx *context.Context) *string {
 
 // CurrentAccount gets current account from the context
 func CurrentAccount(ctx *context.Context) *int {
-	currentAccount := ctx.Value(KeyCurrentAccount)
+	currentAccount := *ctx.Value(KeyCurrentAccount)
 	if currentAccount != nil {
 		v := currentAccount.(int)
 		return &v
@@ -126,7 +126,7 @@ func CurrentAccount(ctx *context.Context) *int {
 
 // UserID gets current userId logged in from the context
 func UserID(ctx *context.Context) int {
-	userID := ctx.Value(KeyUserID)
+	userID := *ctx.Value(KeyUserID)
 	if userID != nil {
 		v := userID.(int)
 		return v
@@ -136,7 +136,7 @@ func UserID(ctx *context.Context) int {
 
 // CustomerID gets current logged-in UserID's CustomerID from customer-payfazz from context
 func CustomerID(ctx *context.Context) int {
-	customerID := ctx.Value(KeyCustomerID)
+	customerID := *ctx.Value(KeyCustomerID)
 	if customerID != nil {
 		v := customerID.(int)
 		return v
@@ -146,7 +146,7 @@ func CustomerID(ctx *context.Context) int {
 
 // WarehouseID gets current prefered warehouseID of CustomerID
 func WarehouseID(ctx *context.Context) int {
-	warehouseID := ctx.Value(KeyWarehouseID)
+	warehouseID := *ctx.Value(KeyWarehouseID)
 	if warehouseID != nil {
 		v := warehouseID.(int)
 		return v
@@ -156,7 +156,7 @@ func WarehouseID(ctx *context.Context) int {
 
 // VersionCode gets current version code of request
 func VersionCode(ctx *context.Context) int {
-	versionCode := ctx.Value(KeyVersionCode)
+	versionCode := *ctx.Value(KeyVersionCode)
 	if versionCode != nil {
 		v := versionCode.(int)
 		return v
@@ -166,7 +166,7 @@ func VersionCode(ctx *context.Context) int {
 
 // CurrentClientAccess gets current client id from the context
 func CurrentClientAccess(ctx *context.Context) []string {
-	currentClientAccess := ctx.Value(KeyCurrentClientAccess)
+	currentClientAccess := *ctx.Value(KeyCurrentClientAccess)
 	// datas := reflect.ValueOf(currentClientAccess)
 	// if datas.Kind() != reflect.Slice {
 	// 	return nil
@@ -184,7 +184,7 @@ func CurrentClientAccess(ctx *context.Context) []string {
 
 // ClientID gets current client from the context
 func ClientID(ctx *context.Context) *int {
-	currentClientAccess := ctx.Value(KeyClientID)
+	currentClientAccess := *ctx.Value(KeyClientID)
 	if currentClientAccess != nil {
 		v := currentClientAccess.(int)
 		return &v
@@ -194,7 +194,7 @@ func ClientID(ctx *context.Context) *int {
 
 // IsSales gets current type of customer
 func IsSales(ctx *context.Context) bool {
-	isSales := ctx.Value(KeyIsSales)
+	isSales := *ctx.Value(KeyIsSales)
 	if isSales != nil {
 		v := isSales.(bool)
 		return v
@@ -204,7 +204,7 @@ func IsSales(ctx *context.Context) bool {
 
 // WarehouseProvider gets current client from the context
 func WarehouseProvider(ctx *context.Context) *int {
-	warehouseProvider := ctx.Value(KeyWarehouseProvider)
+	warehouseProvider := *ctx.Value(KeyWarehouseProvider)
 	if warehouseProvider != nil {
 		v := warehouseProvider.(int)
 		return &v
@@ -214,7 +214,7 @@ func WarehouseProvider(ctx *context.Context) *int {
 
 // LogString gets log String from context
 func LogString(ctx *context.Context) *string {
-	logString := ctx.Value(KeyLogString)
+	logString := *ctx.Value(KeyLogString)
 	if logString != nil {
 		v := logString.(*string)
 		return v
@@ -224,7 +224,7 @@ func LogString(ctx *context.Context) *string {
 
 // AllLog gets log String from context
 func AllLog(ctx *context.Context) *string {
-	logString := ctx.Value(KeyAllLog)
+	logString := *ctx.Value(KeyAllLog)
 	if logString != nil {
 		v := logString.(string)
 		return &v
@@ -234,7 +234,7 @@ func AllLog(ctx *context.Context) *string {
 
 // ClientRequests gets all client requests
 func ClientRequests(ctx *context.Context) interface{} {
-	clientRequests := ctx.Value(KeyClientRequests)
+	clientRequests := *ctx.Value(KeyClientRequests)
 	if clientRequests != nil {
 		v := clientRequests.(interface{})
 		return v
@@ -244,7 +244,7 @@ func ClientRequests(ctx *context.Context) interface{} {
 
 // RequestStatus gets request status from context
 func RequestStatus(ctx *context.Context) *string {
-	requestStatus := ctx.Value(KeyRequestStatus)
+	requestStatus := *ctx.Value(KeyRequestStatus)
 	if requestStatus != nil {
 		v := requestStatus.(string)
 		return &v
@@ -254,7 +254,7 @@ func RequestStatus(ctx *context.Context) *string {
 
 // RequestHeader gets client request header
 func RequestHeader(ctx *context.Context) string {
-	requestHeader := ctx.Value(KeyRequestHeader)
+	requestHeader := *ctx.Value(KeyRequestHeader)
 	if requestHeader != nil {
 		v := requestHeader.(string)
 		return v
@@ -264,7 +264,7 @@ func RequestHeader(ctx *context.Context) string {
 
 // RequestBody gets client request body
 func RequestBody(ctx *context.Context) interface{} {
-	requestBody := ctx.Value(KeyRequestBody)
+	requestBody := *ctx.Value(KeyRequestBody)
 	if requestBody != nil {
 		v := requestBody.(interface{})
 		return v
@@ -274,7 +274,7 @@ func RequestBody(ctx *context.Context) interface{} {
 
 // WarehouseIDs gets current list warehouse id access
 func WarehouseIDs(ctx *context.Context) []*int {
-	warehouseIDs := ctx.Value(KeyWarehouseIDs)
+	warehouseIDs := *ctx.Value(KeyWarehouseIDs)
 	if warehouseIDs != nil {
 		v := warehouseIDs.([]*int)
 		return v
@@ -284,7 +284,7 @@ func WarehouseIDs(ctx *context.Context) []*int {
 
 // RequestReferenceID gets current reference request id
 func RequestReferenceID(ctx *context.Context) int {
-	requestReferenceID := ctx.Value(KeyRequestReferenceID)
+	requestReferenceID := *ctx.Value(KeyRequestReferenceID)
 	if requestReferenceID != nil {
 		v := requestReferenceID.(int)
 		return v
