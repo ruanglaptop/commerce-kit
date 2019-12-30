@@ -302,7 +302,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			}
 		}
 
-		requestStatus := appcontext.RequestStatus(ctx)
+		requestStatus := appcontext.RequestStatus(*ctx)
 		if requestStatus == nil && isAcknowledgeNeeded {
 			currentClientRequests := []*ClientRequest{}
 			temp := appcontext.ClientRequests(*ctx)
