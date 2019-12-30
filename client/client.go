@@ -74,8 +74,8 @@ var httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 // GenericHTTPClient represents an interface to generalize an object to implement HTTPClient
 type GenericHTTPClient interface {
 	Do(req *http.Request) (string, *ResponseError)
-	CallClient(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
-	CallClientWithCircuitBreaker(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithoutLog(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	AddAuthentication(ctx context.Context, authorizationType AuthorizationType)
 }
@@ -184,7 +184,7 @@ func (c *HTTPClient) Do(req *http.Request) (string, *ResponseError) {
 }
 
 // CallClient do call client
-func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -223,7 +223,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	clientID, clientType := determineClient(ctx)
+	clientID, clientType := determineClient(*ctx)
 	requestRaw := types.Metadata{}
 	if request != nil && request != "" {
 		err = json.Unmarshal(jsonData, &requestRaw)
@@ -237,8 +237,8 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 
 	var clientRequestLog *ClientRequestLog
 	var errClientRequestLog *types.Error
-	tempCurrentAccount := appcontext.CurrentAccount(ctx)
-	requestReferenceID := appcontext.RequestReferenceID(ctx)
+	tempCurrentAccount := appcontext.CurrentAccount(*ctx)
+	requestReferenceID := appcontext.RequestReferenceID(*ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
 		clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Insert(backgroundContext, &ClientRequestLog{
@@ -305,7 +305,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 		requestStatus := appcontext.RequestStatus(ctx)
 		if requestStatus == nil && isAcknowledgeNeeded {
 			currentClientRequests := []*ClientRequest{}
-			temp := appcontext.ClientRequests(ctx)
+			temp := appcontext.ClientRequests(*ctx)
 			if temp != nil {
 				currentClientRequests = temp.([]*ClientRequest)
 			}
@@ -313,7 +313,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 				Client:  c,
 				Request: clientRequestLog,
 			})
-			ctx = context.WithValue(ctx, appcontext.KeyClientRequests, currentClientRequests)
+			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
 			// ignore when error occurs
 			_ = c.acknowledgeRequestService.Create(backgroundContext, &AcknowledgeRequest{
 				RequestID:          clientRequestLog.ID,
@@ -339,7 +339,7 @@ func (c *HTTPClient) CallClient(ctx context.Context, path string, method Method,
 }
 
 // CallClientWithCircuitBreaker do call client with circuit breaker (async)
-func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -379,7 +379,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 		}
 		req.Header.Add("Content-Type", "application/json")
 
-		clientID, clientType := determineClient(ctx)
+		clientID, clientType := determineClient(*ctx)
 		requestRaw := types.Metadata{}
 		if request != nil {
 			err = json.Unmarshal(jsonData, &requestRaw)
@@ -393,8 +393,8 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 
 		var clientRequestLog *ClientRequestLog
 		var errClientRequestLog *types.Error
-		tempCurrentAccount := appcontext.CurrentAccount(ctx)
-		requestReferenceID := appcontext.RequestReferenceID(ctx)
+		tempCurrentAccount := appcontext.CurrentAccount(*ctx)
+		requestReferenceID := appcontext.RequestReferenceID(*ctx)
 		backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 		if method != GET {
 			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Insert(backgroundContext, &ClientRequestLog{
@@ -457,10 +457,10 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 				}
 			}
 
-			requestStatus := appcontext.RequestStatus(ctx)
+			requestStatus := appcontext.RequestStatus(*ctx)
 			if requestStatus == nil && isAcknowledgeNeeded {
 				currentClientRequests := []*ClientRequest{}
-				temp := appcontext.ClientRequests(ctx)
+				temp := appcontext.ClientRequests(*ctx)
 				if temp != nil {
 					currentClientRequests = temp.([]*ClientRequest)
 				}
@@ -468,7 +468,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx context.Context, path stri
 					Client:  c,
 					Request: clientRequestLog,
 				})
-				ctx = context.WithValue(ctx, appcontext.KeyClientRequests, currentClientRequests)
+				*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
 				// ignore when error occurs
 				_ = c.acknowledgeRequestService.Create(backgroundContext, &AcknowledgeRequest{
 					RequestID:          clientRequestLog.ID,

@@ -121,21 +121,21 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx context.Context, status stri
 		clientRequests = temp.([]*ClientRequest)
 	}
 
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
-	currentRequest, err := s.clientRequestLog.FindByID(ctx, requestReferenceID)
+	currentRequest, err := s.clientRequestLog.FindByID(backgroundContext, requestReferenceID)
 	if err != nil {
 		return err.Error
 	}
 
 	currentRequest.ReferenceID = requestReferenceID
 	currentRequest.Status = status
-	_, err = s.clientRequestLog.Update(ctx, currentRequest)
+	_, err = s.clientRequestLog.Update(backgroundContext, currentRequest)
 	if err != nil {
 		return err.Error
 	}
 
-	tempCurrentAccount := appcontext.CurrentAccount(ctx)
-	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	for _, clientRequest := range clientRequests {
 		// acknowledge client to commit / rollback
 		var responseResult types.Metadata
