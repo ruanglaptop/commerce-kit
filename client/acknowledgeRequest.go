@@ -114,7 +114,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 
 // Acknowledge broadcast status (rollback if failed and commit if succeed) request to all request had been sent before
 func (s *AcknowledgeRequestService) Acknowledge(ctx context.Context, status string, message string) error {
-	ctx = context.WithValue(ctx, appcontext.KeyRequestStatus, &status)
+	ctx = context.WithValue(ctx, appcontext.KeyRequestStatus, status)
 	clientRequests := []*ClientRequest{}
 	temp := appcontext.ClientRequests(ctx)
 	if temp != nil {
@@ -138,16 +138,16 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx context.Context, status stri
 
 	for _, clientRequest := range clientRequests {
 		// acknowledge client to commit / rollback
-		var responseResult types.Metadata
 		responseError := clientRequest.Client.CallClient(
 			&ctx,
 			fmt.Sprintf("%s?s=%s", clientRequest.Request.URL, status),
 			Method(clientRequest.Request.Method),
 			clientRequest.Request.Request,
-			responseResult,
+			nil,
 			false,
 		)
-		if responseError.Error != nil {
+
+		if responseError != nil && responseError.Error != nil {
 			return responseError.Error
 		}
 
