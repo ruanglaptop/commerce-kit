@@ -94,7 +94,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 		ClientType:     clientType,
 		Method:         methodName,
 		URL:            urlPath,
-		Header:         appcontext.RequestHeader(ctx),
+		Header:         appcontext.RequestHeader(*ctx),
 		Request:        requestRaw,
 		Status:         "called",
 		HTTPStatusCode: 200,
