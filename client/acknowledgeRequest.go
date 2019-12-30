@@ -31,18 +31,18 @@ type FindAllAcknowledgeRequests struct {
 
 // AcknowledgeRequestStorage represents the interface for manage acknowledge request object
 type AcknowledgeRequestStorage interface {
-	FindAll(ctx context.Context, params *FindAllAcknowledgeRequests) ([]*AcknowledgeRequest, *types.Error)
-	FindByID(ctx context.Context, acknowledgeRequestID int) (*AcknowledgeRequest, *types.Error)
-	Insert(ctx context.Context, acknowledgeRequest *AcknowledgeRequest) (*AcknowledgeRequest, *types.Error)
-	Update(ctx context.Context, acknowledgeRequest *AcknowledgeRequest) (*AcknowledgeRequest, *types.Error)
-	Delete(ctx context.Context, acknowledgeRequestID int) *types.Error
+	FindAll(ctx *context.Context, params *FindAllAcknowledgeRequests) ([]*AcknowledgeRequest, *types.Error)
+	FindByID(ctx *context.Context, acknowledgeRequestID int) (*AcknowledgeRequest, *types.Error)
+	Insert(ctx *context.Context, acknowledgeRequest *AcknowledgeRequest) (*AcknowledgeRequest, *types.Error)
+	Update(ctx *context.Context, acknowledgeRequest *AcknowledgeRequest) (*AcknowledgeRequest, *types.Error)
+	Delete(ctx *context.Context, acknowledgeRequestID int) *types.Error
 }
 
 // AcknowledgeRequestServiceInterface represents an interface segreggation to encapsulate object of AcknowledgeRequest to control commit
 type AcknowledgeRequestServiceInterface interface {
-	Acknowledge(ctx context.Context, status string, message string) error
-	Prepare(ctx *context.Context) error
-	Create(ctx context.Context, acknowledgeRequest *AcknowledgeRequest) error
+	Acknowledge(ctx *context.Context, status string, message string) error
+	Prepare(ctx **context.Context) error
+	Create(ctx *context.Context, acknowledgeRequest *AcknowledgeRequest) error
 }
 
 // AcknowledgeRequestService represents the services for acknowledge request
@@ -52,7 +52,7 @@ type AcknowledgeRequestService struct {
 }
 
 // Create Create log to store the request which needed to be acknowledged
-func (s *AcknowledgeRequestService) Create(ctx context.Context, acknowledgeRequest *AcknowledgeRequest) error {
+func (s *AcknowledgeRequestService) Create(ctx *context.Context, acknowledgeRequest *AcknowledgeRequest) error {
 	_, err := s.acknowledgeRequestStorage.Insert(ctx, acknowledgeRequest)
 	if err != nil {
 		return err.Error
@@ -61,7 +61,7 @@ func (s *AcknowledgeRequestService) Create(ctx context.Context, acknowledgeReque
 }
 
 // Prepare store request log to this services before starting run in transaction
-func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
+func (s *AcknowledgeRequestService) Prepare(ctx **context.Context) error {
 	// write request log to this service
 	clientID, clientType := determineClient(*ctx)
 
@@ -113,7 +113,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 }
 
 // Acknowledge broadcast status (rollback if failed and commit if succeed) request to all request had been sent before
-func (s *AcknowledgeRequestService) Acknowledge(ctx context.Context, status string, message string) error {
+func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status string, message string) error {
 	ctx = context.WithValue(ctx, appcontext.KeyRequestStatus, status)
 	clientRequests := []*ClientRequest{}
 	temp := appcontext.ClientRequests(ctx)

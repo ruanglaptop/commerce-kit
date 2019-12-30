@@ -63,7 +63,7 @@ func generateFilePath(currentAccount *int, fileName string) (string, error) {
 }
 
 // doDelete process to delete to bucket
-func (s *Service) doDelete(ctx context.Context, url string) *types.Error {
+func (s *Service) doDelete(ctx *context.Context, url string) *types.Error {
 
 	bucket := "l8ldiytwq83d8ckg"
 	sess, err := session.NewSession(&aws.Config{})
@@ -100,7 +100,7 @@ func (s *Service) doDelete(ctx context.Context, url string) *types.Error {
 }
 
 // doUpload process to upload to bucket
-func (s *Service) doUpload(ctx context.Context, fileBytes []byte, url string) *types.Error {
+func (s *Service) doUpload(ctx *context.Context, fileBytes []byte, url string) *types.Error {
 	before := func(asFunc func(interface{}) bool) error {
 		req := &s3manager.UploadInput{}
 		ok := asFunc(&req)
@@ -145,7 +145,7 @@ func (s *Service) doUpload(ctx context.Context, fileBytes []byte, url string) *t
 }
 
 // Upload upload file
-func (s *Service) Upload(ctx context.Context, fileBytes []byte, fileName string) (*File, *types.Error) {
+func (s *Service) Upload(ctx *context.Context, fileBytes []byte, fileName string) (*File, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Upload"
@@ -192,7 +192,7 @@ func NewService(bucket *blob.Bucket, bucketName string, url string) *Service {
 }
 
 // SetupBucket creates a connection to a particular cloud provider's blob storage.
-func SetupBucket(ctx context.Context, config *ConfigParams) (*blob.Bucket, error) {
+func SetupBucket(ctx *context.Context, config *ConfigParams) (*blob.Bucket, error) {
 	switch config.Cloud {
 	case "aws":
 		return setupAWS(ctx, config)
@@ -204,7 +204,7 @@ func SetupBucket(ctx context.Context, config *ConfigParams) (*blob.Bucket, error
 }
 
 // setupGCP setupGCP return bucket
-func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
+func setupGCP(ctx *context.Context, bucket string) (*blob.Bucket, error) {
 	// DefaultCredentials assumes a user has logged in with gcloud.
 	// See here for more information:
 	// https://cloud.google.com/docs/authentication/getting-started
@@ -221,7 +221,7 @@ func setupGCP(ctx context.Context, bucket string) (*blob.Bucket, error) {
 }
 
 // setupAWS setupAWS return bucket
-func setupAWS(ctx context.Context, config *ConfigParams) (*blob.Bucket, error) {
+func setupAWS(ctx *context.Context, config *ConfigParams) (*blob.Bucket, error) {
 	c := &aws.Config{
 		// Either hard-code the region or use AWS_REGION.
 		Region: aws.String("ap-southeast-1"),

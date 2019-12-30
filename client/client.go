@@ -74,10 +74,10 @@ var httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 // GenericHTTPClient represents an interface to generalize an object to implement HTTPClient
 type GenericHTTPClient interface {
 	Do(req *http.Request) (string, *ResponseError)
-	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
-	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
-	CallClientWithoutLog(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
-	AddAuthentication(ctx context.Context, authorizationType AuthorizationType)
+	CallClient(ctx **context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithCircuitBreaker(ctx **context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithoutLog(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	AddAuthentication(ctx *context.Context, authorizationType AuthorizationType)
 }
 
 // HTTPClient represents the service http client
@@ -184,7 +184,7 @@ func (c *HTTPClient) Do(req *http.Request) (string, *ResponseError) {
 }
 
 // CallClient do call client
-func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+func (c *HTTPClient) CallClient(ctx **context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -339,7 +339,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 }
 
 // CallClientWithCircuitBreaker do call client with circuit breaker (async)
-func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+func (c *HTTPClient) CallClientWithCircuitBreaker(ctx **context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -496,7 +496,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 }
 
 // CallClientWithoutLog do call client without log
-func (c *HTTPClient) CallClientWithoutLog(ctx context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -554,7 +554,7 @@ func (c *HTTPClient) CallClientWithoutLog(ctx context.Context, path string, meth
 }
 
 // AddAuthentication do add authentication
-func (c *HTTPClient) AddAuthentication(ctx context.Context, authorizationType AuthorizationType) {
+func (c *HTTPClient) AddAuthentication(ctx *context.Context, authorizationType AuthorizationType) {
 	c.AuthorizationTypes = append(c.AuthorizationTypes, authorizationType)
 }
 

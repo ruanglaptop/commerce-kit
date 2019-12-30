@@ -15,7 +15,7 @@ type Manager struct {
 }
 
 // RunInTransaction runs the f with the transaction queryable inside the context
-func (m *Manager) RunInTransaction(ctx context.Context, f func(tctx *context.Context) error) error {
+func (m *Manager) RunInTransaction(ctx *context.Context, f func(tctx **context.Context) error) error {
 	tx, err := m.db.Beginx()
 	if err != nil {
 		tx.Rollback()

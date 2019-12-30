@@ -18,7 +18,7 @@ type ClientRequestLogPostgresStorage struct {
 }
 
 // FindAll get list of client request logs
-func (s *ClientRequestLogPostgresStorage) FindAll(ctx context.Context, params *client.FindAllClientRequestLogs) ([]*client.ClientRequestLog, *types.Error) {
+func (s *ClientRequestLogPostgresStorage) FindAll(ctx *context.Context, params *client.FindAllClientRequestLogs) ([]*client.ClientRequestLog, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "FindAll"
@@ -68,7 +68,7 @@ func (s *ClientRequestLogPostgresStorage) FindAll(ctx context.Context, params *c
 }
 
 // FindByID get client request log by its id
-func (s *ClientRequestLogPostgresStorage) FindByID(ctx context.Context, clientRequestLogID int) (*client.ClientRequestLog, *types.Error) {
+func (s *ClientRequestLogPostgresStorage) FindByID(ctx *context.Context, clientRequestLogID int) (*client.ClientRequestLog, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "FindByID"
@@ -96,7 +96,7 @@ func (s *ClientRequestLogPostgresStorage) FindByID(ctx context.Context, clientRe
 }
 
 // Insert create a new client request log
-func (s *ClientRequestLogPostgresStorage) Insert(ctx context.Context, clientRequestLog *client.ClientRequestLog) (*client.ClientRequestLog, *types.Error) {
+func (s *ClientRequestLogPostgresStorage) Insert(ctx *context.Context, clientRequestLog *client.ClientRequestLog) (*client.ClientRequestLog, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Insert"
@@ -124,7 +124,7 @@ func (s *ClientRequestLogPostgresStorage) Insert(ctx context.Context, clientRequ
 }
 
 // Update update a client request log
-func (s *ClientRequestLogPostgresStorage) Update(ctx context.Context, clientRequestLog *client.ClientRequestLog) (*client.ClientRequestLog, *types.Error) {
+func (s *ClientRequestLogPostgresStorage) Update(ctx *context.Context, clientRequestLog *client.ClientRequestLog) (*client.ClientRequestLog, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Update"
@@ -152,7 +152,7 @@ func (s *ClientRequestLogPostgresStorage) Update(ctx context.Context, clientRequ
 }
 
 // Delete delete a client request log
-func (s *ClientRequestLogPostgresStorage) Delete(ctx context.Context, clientRequestLogID int) *types.Error {
+func (s *ClientRequestLogPostgresStorage) Delete(ctx *context.Context, clientRequestLogID int) *types.Error {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Delete"

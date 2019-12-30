@@ -38,9 +38,9 @@ type FindAllClientRequestLogs struct {
 
 // ClientRequestLogStorage represents the interface for manage client request log object
 type ClientRequestLogStorage interface {
-	FindAll(ctx context.Context, params *FindAllClientRequestLogs) ([]*ClientRequestLog, *types.Error)
-	FindByID(ctx context.Context, clientRequestLogID int) (*ClientRequestLog, *types.Error)
-	Insert(ctx context.Context, clientRequestLog *ClientRequestLog) (*ClientRequestLog, *types.Error)
-	Update(ctx context.Context, clientRequestLog *ClientRequestLog) (*ClientRequestLog, *types.Error)
-	Delete(ctx context.Context, clientRequestLogID int) *types.Error
+	FindAll(ctx *context.Context, params *FindAllClientRequestLogs) ([]*ClientRequestLog, *types.Error)
+	FindByID(ctx *context.Context, clientRequestLogID int) (*ClientRequestLog, *types.Error)
+	Insert(ctx *context.Context, clientRequestLog *ClientRequestLog) (*ClientRequestLog, *types.Error)
+	Update(ctx *context.Context, clientRequestLog *ClientRequestLog) (*ClientRequestLog, *types.Error)
+	Delete(ctx *context.Context, clientRequestLogID int) *types.Error
 }

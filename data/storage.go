@@ -24,29 +24,29 @@ var (
 // GenericStorage represents the generic Storage
 // for the domain models that matches with its database models
 type GenericStorage interface {
-	Single(ctx context.Context, elem interface{}, where string, arg map[string]interface{}) error
-	Where(ctx context.Context, elems interface{}, where string, arg map[string]interface{}) error
-	SelectWithQuery(ctx context.Context, elem interface{}, query string, args map[string]interface{}) error
-	FindByID(ctx context.Context, elem interface{}, id interface{}) error
-	FindAll(ctx context.Context, elems interface{}, page int, limit int) error
-	Insert(ctx context.Context, elem interface{}) error
-	InsertMany(ctx context.Context, elem interface{}) error
-	InsertManyWithTime(ctx context.Context, elem interface{}, createdAt time.Time) error
-	Update(ctx context.Context, elem interface{}) error
-	Delete(ctx context.Context, id interface{}) error
-	DeleteMany(ctx context.Context, ids interface{}) error
+	Single(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error
+	Where(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error
+	SelectWithQuery(ctx *context.Context, elem interface{}, query string, args map[string]interface{}) error
+	FindByID(ctx *context.Context, elem interface{}, id interface{}) error
+	FindAll(ctx *context.Context, elems interface{}, page int, limit int) error
+	Insert(ctx *context.Context, elem interface{}) error
+	InsertMany(ctx *context.Context, elem interface{}) error
+	InsertManyWithTime(ctx *context.Context, elem interface{}, createdAt time.Time) error
+	Update(ctx *context.Context, elem interface{}) error
+	Delete(ctx *context.Context, id interface{}) error
+	DeleteMany(ctx *context.Context, ids interface{}) error
 }
 
 // ImmutableGenericStorage represents the immutable generic Storage
 // for the domain models that matches with its database models.
 // The immutable generic Storage provides only the find & insert methods.
 type ImmutableGenericStorage interface {
-	Single(ctx context.Context, elem interface{}, where string, arg map[string]interface{}) error
-	Where(ctx context.Context, elems interface{}, where string, arg map[string]interface{}) error
-	FindByID(ctx context.Context, elem interface{}, id interface{}) error
-	FindAll(ctx context.Context, elems interface{}, page int, limit int) error
-	Insert(ctx context.Context, elem interface{}) error
-	DeleteMany(ctx context.Context, ids interface{}) error
+	Single(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error
+	Where(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error
+	FindByID(ctx *context.Context, elem interface{}, id interface{}) error
+	FindAll(ctx *context.Context, elems interface{}, page int, limit int) error
+	Insert(ctx *context.Context, elem interface{}) error
+	DeleteMany(ctx *context.Context, ids interface{}) error
 }
 
 // PostgresStorage is the postgres implementation of generic Storage
@@ -77,7 +77,7 @@ type PostgresConfig struct {
 }
 
 // Single queries an element according to the query & argument provided
-func (r *PostgresStorage) Single(ctx context.Context, elem interface{}, where string, arg map[string]interface{}) error {
+func (r *PostgresStorage) Single(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -113,7 +113,7 @@ func (r *PostgresStorage) Single(ctx context.Context, elem interface{}, where st
 }
 
 // Where queries the elements according to the query & argument provided
-func (r *PostgresStorage) Where(ctx context.Context, elems interface{}, where string, arg map[string]interface{}) error {
+func (r *PostgresStorage) Where(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -151,7 +151,7 @@ func (r *PostgresStorage) Where(ctx context.Context, elems interface{}, where st
 }
 
 // SelectWithQuery Customizable Query for Select
-func (r *PostgresStorage) SelectWithQuery(ctx context.Context, elems interface{}, query string, arg map[string]interface{}) error {
+func (r *PostgresStorage) SelectWithQuery(ctx *context.Context, elems interface{}, query string, arg map[string]interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -181,7 +181,7 @@ func (r *PostgresStorage) SelectWithQuery(ctx context.Context, elems interface{}
 // FindByID finds an element by its id
 // it's defined in this project context that
 // the element id column in the db should be "id"
-func (r *PostgresStorage) FindByID(ctx context.Context, elem interface{}, id interface{}) error {
+func (r *PostgresStorage) FindByID(ctx *context.Context, elem interface{}, id interface{}) error {
 	where := `"id" = :id`
 	err := r.Single(ctx, elem, where, map[string]interface{}{
 		"id": id,
@@ -194,7 +194,7 @@ func (r *PostgresStorage) FindByID(ctx context.Context, elem interface{}, id int
 }
 
 // FindAll finds all elements from the database.
-func (r *PostgresStorage) FindAll(ctx context.Context, elems interface{}, page int, limit int) error {
+func (r *PostgresStorage) FindAll(ctx *context.Context, elems interface{}, page int, limit int) error {
 	where := `true`
 	where = fmt.Sprintf(`%s ORDER BY "id" DESC LIMIT :limit OFFSET :offset`, where)
 
@@ -228,7 +228,7 @@ func interfaceConversion(i interface{}) (map[string]interface{}, error) {
 // It will set the "owner" field of the element with the current account in the context if exists.
 // It will set the "createdAt" and "updatedAt" fields with current time.
 // If immutable set true, it won't insert the updatedAt
-func (r *PostgresStorage) Insert(ctx context.Context, elem interface{}) error {
+func (r *PostgresStorage) Insert(ctx *context.Context, elem interface{}) error {
 	currentAccount := appcontext.CurrentAccount(ctx)
 	currentUserID, currentUserType := determineUser(ctx)
 	db := r.db
@@ -367,7 +367,7 @@ func (r *LogStorage) insertArgs(currentAccount *int, currentUserID int, elem int
 }
 
 // InsertMany is function for creating many datas into specific table in database.
-func (r *PostgresStorage) InsertMany(ctx context.Context, elem interface{}) error {
+func (r *PostgresStorage) InsertMany(ctx *context.Context, elem interface{}) error {
 	currentAccount := appcontext.CurrentAccount(ctx)
 	currentUserID, _ := determineUser(ctx)
 	db := r.db
@@ -458,7 +458,7 @@ func (r *PostgresStorage) InsertMany(ctx context.Context, elem interface{}) erro
 }
 
 // InsertManyWithTime is function for creating many datas into specific table in database with specific createdAt.
-func (r *PostgresStorage) InsertManyWithTime(ctx context.Context, elem interface{}, createdAt time.Time) error {
+func (r *PostgresStorage) InsertManyWithTime(ctx *context.Context, elem interface{}, createdAt time.Time) error {
 	currentAccount := appcontext.CurrentAccount(ctx)
 	currentUserID, _ := determineUser(ctx)
 
@@ -538,7 +538,7 @@ func (r *PostgresStorage) InsertManyWithTime(ctx context.Context, elem interface
 	return nil
 }
 
-func (r *PostgresStorage) insertData(ctx context.Context, sqlStr string, dbArgs map[string]interface{}) error {
+func (r *PostgresStorage) insertData(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -594,7 +594,7 @@ func (r *PostgresStorage) findChanges(existingElem interface{}, elem interface{}
 
 // Update updates the element in the database.
 // It will update the "updatedAt" field.
-func (r *PostgresStorage) Update(ctx context.Context, elem interface{}) error {
+func (r *PostgresStorage) Update(ctx *context.Context, elem interface{}) error {
 	currentUserID, currentUserType := determineUser(ctx)
 	db := r.db
 	tx, ok := TxFromContext(ctx)
@@ -705,7 +705,7 @@ func (r *PostgresStorage) updateArgs(currentUserID int, existingElem interface{}
 // Delete deletes the elem from database.
 // Delete not really deletes the elem from the db, but it will set the
 // "deletedAt" column to current time.
-func (r *PostgresStorage) Delete(ctx context.Context, id interface{}) error {
+func (r *PostgresStorage) Delete(ctx *context.Context, id interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -760,7 +760,7 @@ func (r *PostgresStorage) Delete(ctx context.Context, id interface{}) error {
 // DeleteMany delete elems from database.
 // DeleteMany not really delete elems from the db, but it will set the
 // "deletedAt" column to current time.
-func (r *PostgresStorage) DeleteMany(ctx context.Context, ids interface{}) error {
+func (r *PostgresStorage) DeleteMany(ctx *context.Context, ids interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -833,7 +833,7 @@ type ActivityLog struct {
 	CreatedAt       *time.Time             `db:"createdAt"`
 }
 
-func (r *PostgresStorage) createLog(ctx context.Context, params *ActivityLog) error {
+func (r *PostgresStorage) createLog(ctx *context.Context, params *ActivityLog) error {
 	currentAccount := appcontext.CurrentAccount(ctx)
 	if currentAccount == nil {
 		return nil
@@ -865,11 +865,11 @@ func (r *PostgresStorage) createLog(ctx context.Context, params *ActivityLog) er
 	return nil
 }
 
-func getContextVariables(ctx context.Context) (int, int, *int) {
+func getContextVariables(ctx *context.Context) (int, int, *int) {
 	return appcontext.UserID(ctx), appcontext.CustomerID(ctx), appcontext.ClientID(ctx)
 }
 
-func determineUser(ctx context.Context) (int, string) {
+func determineUser(ctx *context.Context) (int, string) {
 	userID, customerID, clientID := getContextVariables(ctx)
 	var resUserID int
 	var resUserType string

@@ -18,7 +18,7 @@ type AcknowledgeRequestPostgresStorage struct {
 }
 
 // FindAll get list of acknowledge requests
-func (s *AcknowledgeRequestPostgresStorage) FindAll(ctx context.Context, params *client.FindAllAcknowledgeRequests) ([]*client.AcknowledgeRequest, *types.Error) {
+func (s *AcknowledgeRequestPostgresStorage) FindAll(ctx *context.Context, params *client.FindAllAcknowledgeRequests) ([]*client.AcknowledgeRequest, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "FindAll"
@@ -65,7 +65,7 @@ func (s *AcknowledgeRequestPostgresStorage) FindAll(ctx context.Context, params 
 }
 
 // FindByID get acknowledge request by its id
-func (s *AcknowledgeRequestPostgresStorage) FindByID(ctx context.Context, acknowledgeRequestID int) (*client.AcknowledgeRequest, *types.Error) {
+func (s *AcknowledgeRequestPostgresStorage) FindByID(ctx *context.Context, acknowledgeRequestID int) (*client.AcknowledgeRequest, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "FindByID"
@@ -93,7 +93,7 @@ func (s *AcknowledgeRequestPostgresStorage) FindByID(ctx context.Context, acknow
 }
 
 // Insert create a new acknowledge request
-func (s *AcknowledgeRequestPostgresStorage) Insert(ctx context.Context, acknowledgeRequest *client.AcknowledgeRequest) (*client.AcknowledgeRequest, *types.Error) {
+func (s *AcknowledgeRequestPostgresStorage) Insert(ctx *context.Context, acknowledgeRequest *client.AcknowledgeRequest) (*client.AcknowledgeRequest, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Insert"
@@ -121,7 +121,7 @@ func (s *AcknowledgeRequestPostgresStorage) Insert(ctx context.Context, acknowle
 }
 
 // Update update an acknowledge request
-func (s *AcknowledgeRequestPostgresStorage) Update(ctx context.Context, acknowledgeRequest *client.AcknowledgeRequest) (*client.AcknowledgeRequest, *types.Error) {
+func (s *AcknowledgeRequestPostgresStorage) Update(ctx *context.Context, acknowledgeRequest *client.AcknowledgeRequest) (*client.AcknowledgeRequest, *types.Error) {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Update"
@@ -149,7 +149,7 @@ func (s *AcknowledgeRequestPostgresStorage) Update(ctx context.Context, acknowle
 }
 
 // Delete delete an acknowledge request
-func (s *AcknowledgeRequestPostgresStorage) Delete(ctx context.Context, acknowledgeRequestID int) *types.Error {
+func (s *AcknowledgeRequestPostgresStorage) Delete(ctx *context.Context, acknowledgeRequestID int) *types.Error {
 	// log start here
 	logString := appcontext.LogString(ctx)
 	var logMethod = "Delete"
