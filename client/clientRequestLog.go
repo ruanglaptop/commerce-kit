@@ -25,7 +25,7 @@ type ClientRequestLog struct {
 	Request        types.Metadata `json:"request" db:"request"`
 	Status         string         `json:"status" db:"status"`
 	HTTPStatusCode int            `json:"httpStatusCode" db:"httpStatusCode"`
-	ReferenceID    int            `json:"referenceID" db:"referenceID"`
+	ReferenceID    int            `json:"referenceId" db:"referenceId"`
 }
 
 // FindAllClientRequestLogs represents params to get All Client Request Logs
