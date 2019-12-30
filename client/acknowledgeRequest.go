@@ -58,25 +58,25 @@ func (s *AcknowledgeRequestService) Create(ctx context.Context, acknowledgeReque
 }
 
 // Prepare store request log to this services before starting run in transaction
-func (s *AcknowledgeRequestService) Prepare(ctx context.Context) context.Context {
+func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 	// write request log to this service
-	clientID, clientType := determineClient(ctx)
+	clientID, clientType := determineClient(*ctx)
 
 	methodName := ""
-	tMethodName := appcontext.HTTPMethodName(ctx)
+	tMethodName := appcontext.HTTPMethodName(*ctx)
 	if tMethodName != nil {
 		methodName = *tMethodName
 	}
 
 	urlPath := ""
-	tURLPath := appcontext.URLPath(ctx)
+	tURLPath := appcontext.URLPath(*ctx)
 	if tURLPath != nil {
 		urlPath = *tURLPath
 	}
 
 	requestRaw := types.Metadata{}
-	if appcontext.RequestBody(ctx) != nil {
-		jsonData, err := json.Marshal(appcontext.RequestBody(ctx))
+	if appcontext.RequestBody(*ctx) != nil {
+		jsonData, err := json.Marshal(appcontext.RequestBody(*ctx))
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx context.Context) context.Context
 		}
 	}
 
-	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	tempCurrentAccount := appcontext.CurrentAccount(*ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	result, errClientRequestLog := s.clientRequestLog.Insert(backgroundContext, &ClientRequestLog{
 		ClientID:       clientID,
@@ -104,9 +104,9 @@ func (s *AcknowledgeRequestService) Prepare(ctx context.Context) context.Context
 			return errClientRequestLog.Error
 		}
 	}
-	ctx = context.WithValue(ctx, appcontext.KeyRequestReferenceID, result.ID)
+	*ctx = context.WithValue(*ctx, appcontext.KeyRequestReferenceID, result.ID)
 
-	return ctx
+	return nil
 }
 
 // Acknowledge broadcast status (rollback if failed and commit if succeed) request to all request had been sent before
