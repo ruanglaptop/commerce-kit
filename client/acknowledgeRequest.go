@@ -58,7 +58,7 @@ func (s *AcknowledgeRequestService) Create(ctx context.Context, acknowledgeReque
 }
 
 // Prepare store request log to this services before starting run in transaction
-func (s *AcknowledgeRequestService) Prepare(ctx context.Context) error {
+func (s *AcknowledgeRequestService) Prepare(ctx context.Context) context.Context {
 	// write request log to this service
 	clientID, clientType := determineClient(ctx)
 
@@ -106,7 +106,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx context.Context) error {
 	}
 	ctx = context.WithValue(ctx, appcontext.KeyRequestReferenceID, result.ID)
 
-	return nil
+	return ctx
 }
 
 // Acknowledge broadcast status (rollback if failed and commit if succeed) request to all request had been sent before
