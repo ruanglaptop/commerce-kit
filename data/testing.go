@@ -16,7 +16,7 @@ import (
 )
 
 type RiceBoxSource interface {
-	loadMigrations() (*source.Migrations, error)
+	// loadMigrations() (*source.Migrations, error)
 	PopulateMigrations(box *rice.Box) error
 	Open(url string) (source.Driver, error)
 	Close() error
