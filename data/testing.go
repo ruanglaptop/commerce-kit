@@ -16,7 +16,6 @@ import (
 )
 
 type RiceBoxSource interface {
-	// loadMigrations() (*source.Migrations, error)
 	PopulateMigrations(box *rice.Box) error
 	Open(url string) (source.Driver, error)
 	Close() error
@@ -61,13 +60,6 @@ func TestTruncateAll(t *testing.T, connectionInfo string, databaseName string) {
 }
 
 func TestMigrateUp(t *testing.T, DBConnectionString string, sourceDriver RiceBoxSource, box *rice.Box) {
-	// Setup the database
-	//
-	// cfg, err := config.GetConfiguration()
-	// if err != nil {
-	// 	log.Fatal("error when getting configuration: ", err)
-	// }
-
 	db, err := sql.Open("postgres", DBConnectionString)
 	if err != nil {
 		t.Fatalf("error when open postgres connection: '%s'", err)
@@ -107,12 +99,6 @@ func TestMigrateUp(t *testing.T, DBConnectionString string, sourceDriver RiceBox
 
 // TestConnectDB tests connect to the db and returns the sqlx.DB object if succeeded
 func TestConnectDB(t *testing.T, connectionInfo string) *sqlx.DB {
-	// config, err := config.GetConfiguration()
-	// if err != nil {
-	// 	t.Fatalf("an error '%s' was not expected when getting configuration", err)
-	// }
-
-	// connectionInfo := config.DBConnectionString
 	db, err := sqlx.Open("postgres", connectionInfo)
 	db.SetMaxOpenConns(20)
 	db.SetMaxIdleConns(0)
