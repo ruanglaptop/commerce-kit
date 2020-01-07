@@ -91,6 +91,10 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 	}
 
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	result, errClientRequestLog := s.clientRequestLog.Insert(&backgroundContext, &ClientRequestLog{
 		ClientID:       clientID,
@@ -122,6 +126,10 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status str
 	}
 
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	currentRequest, err := s.clientRequestLog.FindByID(&backgroundContext, requestReferenceID)

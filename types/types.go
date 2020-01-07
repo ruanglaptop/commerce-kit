@@ -32,6 +32,11 @@ func (p *Metadata) Scan(src interface{}) error {
 		return err
 	}
 
+	if string(source) == "{}" || string(source) == "null" {
+		*p = map[string]interface{}{}
+		return nil
+	}
+
 	*p, ok = i.(map[string]interface{})
 	if !ok {
 		return errors.New("Type assertion .(map[string]interface{}) failed")

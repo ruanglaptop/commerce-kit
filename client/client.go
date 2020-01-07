@@ -238,6 +238,10 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	var clientRequestLog *ClientRequestLog
 	var errClientRequestLog *types.Error
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
@@ -394,6 +398,10 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		var clientRequestLog *ClientRequestLog
 		var errClientRequestLog *types.Error
 		tempCurrentAccount := appcontext.CurrentAccount(ctx)
+		if tempCurrentAccount == nil {
+			defaultValue := 0
+			tempCurrentAccount = &defaultValue
+		}
 		requestReferenceID := appcontext.RequestReferenceID(ctx)
 		backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 		if method != GET {
