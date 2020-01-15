@@ -128,7 +128,7 @@ func AdvancedError(w http.ResponseWriter, slackNotifier notif.Notifier, logNotif
 	case validator.ValidationErrors:
 		for _, err := range err.Error.(validator.ValidationErrors) {
 			errorFields = append(errorFields,
-				makeFieldError(err.Field(), err.ActualTag()))
+				MakeFieldError(err.Field(), err.ActualTag()))
 		}
 	}
 
