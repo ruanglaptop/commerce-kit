@@ -72,6 +72,9 @@ const (
 
 	// KeyRequestReferenceID represents the the reference id of a specific request
 	KeyRequestReferenceID contextKey = "KeyRequestReferenceID"
+
+	// KeyCurrentXAccessToken represents the current access token of request
+	KeyCurrentXAccessToken contextKey = "CurrentAccessToken"
 )
 
 // Owner gets the data owner from the context
@@ -290,4 +293,14 @@ func RequestReferenceID(ctx *context.Context) int {
 		return v
 	}
 	return 0
+}
+
+// CurrentXAccessToken gets current x access token code of request
+func CurrentXAccessToken(ctx context.Context) string {
+	currentAccessToken := ctx.Value(KeyCurrentXAccessToken)
+	if currentAccessToken != nil {
+		v := currentAccessToken.(string)
+		return v
+	}
+	return ""
 }
