@@ -296,8 +296,8 @@ func RequestReferenceID(ctx *context.Context) int {
 }
 
 // CurrentXAccessToken gets current x access token code of request
-func CurrentXAccessToken(ctx context.Context) string {
-	currentAccessToken := ctx.Value(KeyCurrentXAccessToken)
+func CurrentXAccessToken(ctx *context.Context) string {
+	currentAccessToken := (*ctx).Value(KeyCurrentXAccessToken)
 	if currentAccessToken != nil {
 		v := currentAccessToken.(string)
 		return v
