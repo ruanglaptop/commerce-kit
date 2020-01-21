@@ -131,8 +131,8 @@ func CurrentAccount(ctx *context.Context) *int {
 }
 
 // CurrentClient gets current client from the context
-func CurrentClient(ctx context.Context) *string {
-	currentClientAccess := ctx.Value(KeyCurrentClient)
+func CurrentClient(ctx *context.Context) *string {
+	currentClientAccess := (*ctx).Value(KeyCurrentClient)
 	if currentClientAccess != nil {
 		v := currentClientAccess.(string)
 		return &v
