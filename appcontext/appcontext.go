@@ -75,6 +75,9 @@ const (
 
 	// KeyCurrentXAccessToken represents the current access token of request
 	KeyCurrentXAccessToken contextKey = "CurrentAccessToken"
+
+	// KeyCurrentClient represents the Current Client in http server context
+	KeyCurrentClient contextKey = "CurrentClient"
 )
 
 // Owner gets the data owner from the context
@@ -122,6 +125,16 @@ func CurrentAccount(ctx *context.Context) *int {
 	currentAccount := (*ctx).Value(KeyCurrentAccount)
 	if currentAccount != nil {
 		v := currentAccount.(int)
+		return &v
+	}
+	return nil
+}
+
+// CurrentClient gets current client from the context
+func CurrentClient(ctx context.Context) *string {
+	currentClientAccess := ctx.Value(KeyCurrentClient)
+	if currentClientAccess != nil {
+		v := currentClientAccess.(string)
 		return &v
 	}
 	return nil
