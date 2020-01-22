@@ -494,7 +494,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 
 		if response != "" && result != nil {
 			if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
-				return errDo
+				return errDo.Error
 			}
 
 			err = json.Unmarshal([]byte(response), result)
