@@ -33,8 +33,8 @@ const (
 type ResponseError struct {
 	Code       string         `json:"code"`
 	Message    string         `json:"message"`
-	Fields     types.Metadata `json:"fields"`
-	StatusCode int            `json:"error"`
+	Fields     types.Metadata `json:"-"`
+	StatusCode int            `json:"statusCode"`
 	Error      error          `json:"error"`
 }
 
@@ -330,10 +330,6 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	if response != "" && result != nil {
-		if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
-			return errDo
-		}
-
 		err = json.Unmarshal([]byte(response), result)
 		if err != nil {
 			errDo = &ResponseError{
@@ -493,10 +489,6 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		if response != "" && result != nil {
-			if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
-				return errDo.Error
-			}
-
 			err = json.Unmarshal([]byte(response), result)
 			if err != nil {
 				errDo = &ResponseError{
@@ -557,10 +549,6 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 	}
 
 	if response != "" && result != nil {
-		if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
-			return errDo
-		}
-
 		err = json.Unmarshal([]byte(response), result)
 		if err != nil {
 			errDo = &ResponseError{
