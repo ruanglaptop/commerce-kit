@@ -330,6 +330,10 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	if response != "" && result != nil {
+		if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
+			return errDo
+		}
+
 		err = json.Unmarshal([]byte(response), result)
 		if err != nil {
 			errDo = &ResponseError{
@@ -488,7 +492,11 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 			}
 		}
 
-		if response != "" {
+		if response != "" && result != nil {
+			if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
+				return errDo
+			}
+
 			err = json.Unmarshal([]byte(response), result)
 			if err != nil {
 				errDo = &ResponseError{
@@ -548,7 +556,11 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 		return errDo
 	}
 
-	if response != "" {
+	if response != "" && result != nil {
+		if errDo.StatusCode < 200 || errDo.StatusCode >= 300 {
+			return errDo
+		}
+
 		err = json.Unmarshal([]byte(response), result)
 		if err != nil {
 			errDo = &ResponseError{
