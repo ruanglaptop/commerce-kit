@@ -30,6 +30,7 @@ func ParseQueryParams(path string, params interface{}) string {
 
 		case reflect.String:
 			val := rval.Field(i).String()
+			val = strings.Replace(val, " ", "%20", -1)
 			if &val != nil && val != "" {
 				listparams = append(listparams, fmt.Sprintf("%s=%v", tag, val))
 			}
