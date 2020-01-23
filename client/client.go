@@ -54,6 +54,7 @@ var (
 	Basic       = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Basic", HeaderTypeValue: "Basic "})
 	Bearer      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Bearer", HeaderTypeValue: "Bearer "})
 	AccessToken = AuthorizationType(AuthorizationTypeStruct{HeaderName: "X-Access-Token", HeaderType: "Auth0", HeaderTypeValue: ""})
+	Secret      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Secret", HeaderType: "", HeaderTypeValue: ""})
 )
 
 //
@@ -217,7 +218,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType.HeaderTypeValue != "" {
+		if authorizationType.HeaderName != "" {
 			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 		}
 	}
@@ -377,7 +378,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		for _, authorizationType := range c.AuthorizationTypes {
-			if authorizationType.HeaderTypeValue != "" {
+			if authorizationType.HeaderName != "" {
 				req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 			}
 		}
@@ -537,7 +538,7 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType.HeaderTypeValue != "" {
+		if authorizationType.HeaderName != "" {
 			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 		}
 	}
