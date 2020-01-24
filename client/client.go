@@ -218,9 +218,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType.HeaderName != "" {
-			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
-		}
+		req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -378,9 +376,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		for _, authorizationType := range c.AuthorizationTypes {
-			if authorizationType.HeaderName != "" {
-				req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
-			}
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 		}
 		req.Header.Add("Content-Type", "application/json")
 
@@ -538,9 +534,7 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType.HeaderName != "" {
-			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
-		}
+		req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
