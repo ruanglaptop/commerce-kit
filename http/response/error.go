@@ -51,7 +51,7 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 	case http.StatusBadRequest:
 		errorCode = "BadRequest"
 	case http.StatusUnprocessableEntity:
-		errorCode = "UnprocessableEntity"
+		errorCode = "ValidationError"
 	case http.StatusInternalServerError:
 		errorCode = "InternalServerError"
 	case http.StatusNotImplemented:
