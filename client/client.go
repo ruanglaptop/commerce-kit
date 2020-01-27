@@ -244,7 +244,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
-		clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
 			ClientID:       clientID,
 			ClientType:     clientType,
 			Method:         string(method),
@@ -255,14 +255,6 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
 		})
-		if errClientRequestLog != nil {
-			if errClientRequestLog.Error != nil {
-				errDo = &ResponseError{
-					Error: errClientRequestLog.Error,
-				}
-				return errDo
-			}
-		}
 	}
 
 	response, errDo = c.Do(req)
@@ -270,15 +262,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		if method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
-			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
-			if errClientRequestLog != nil {
-				if errClientRequestLog.Error != nil {
-					errDo = &ResponseError{
-						Error: errClientRequestLog.Error,
-					}
-					return errDo
-				}
-			}
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
 		return errDo
 	}
@@ -295,15 +279,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		}
 		clientRequestLog.Status = "success"
-		clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
-		if errClientRequestLog != nil {
-			if errClientRequestLog.Error != nil {
-				errDo = &ResponseError{
-					Error: errClientRequestLog.Error,
-				}
-				return errDo
-			}
-		}
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		requestStatus := appcontext.RequestStatus(ctx)
 		if requestStatus == nil && isAcknowledgeNeeded {
@@ -402,7 +378,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		requestReferenceID := appcontext.RequestReferenceID(ctx)
 		backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 		if method != GET {
-			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+			clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
 				ClientID:       clientID,
 				ClientType:     clientType,
 				Method:         string(method),
@@ -413,29 +389,13 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 				HTTPStatusCode: 0,
 				ReferenceID:    requestReferenceID,
 			})
-			if errClientRequestLog != nil {
-				if errClientRequestLog.Error != nil {
-					errDo = &ResponseError{
-						Error: errClientRequestLog.Error,
-					}
-					return errDo.Error
-				}
-			}
 		}
 
 		response, errDo = c.Do(req)
 		if errDo != nil && (errDo.Error != nil || errDo.Message != "") && method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
-			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
-			if errClientRequestLog != nil {
-				if errClientRequestLog.Error != nil {
-					errDo = &ResponseError{
-						Error: errClientRequestLog.Error,
-					}
-					return errDo.Error
-				}
-			}
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 			return errDo.Error
 		}
@@ -452,15 +412,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 				clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			}
 			clientRequestLog.Status = "success"
-			clientRequestLog, errClientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
-			if errClientRequestLog != nil {
-				if errClientRequestLog.Error != nil {
-					errDo = &ResponseError{
-						Error: errClientRequestLog.Error,
-					}
-					return errDo.Error
-				}
-			}
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 			requestStatus := appcontext.RequestStatus(ctx)
 			if requestStatus == nil && isAcknowledgeNeeded {
