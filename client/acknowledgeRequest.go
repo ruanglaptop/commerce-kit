@@ -96,7 +96,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 		tempCurrentAccount = &defaultValue
 	}
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
-	result, errClientRequestLog := s.clientRequestLog.Insert(&backgroundContext, &ClientRequestLog{
+	result := s.clientRequestLog.Insert(&backgroundContext, &ClientRequestLog{
 		ClientID:       clientID,
 		ClientType:     clientType,
 		Method:         methodName,
@@ -106,11 +106,6 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 		Status:         "called",
 		HTTPStatusCode: 200,
 	})
-	if errClientRequestLog != nil {
-		if errClientRequestLog.Error != nil {
-			return errClientRequestLog.Error
-		}
-	}
 	*ctx = context.WithValue(*ctx, appcontext.KeyRequestReferenceID, result.ID)
 
 	return nil
@@ -132,16 +127,12 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status str
 	}
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
-	currentRequest, err := s.clientRequestLog.FindByID(&backgroundContext, requestReferenceID)
-	if err != nil {
-		return err.Error
-	}
+	currentRequest := s.clientRequestLog.FindByID(&backgroundContext, requestReferenceID)
 
-	currentRequest.ReferenceID = requestReferenceID
-	currentRequest.Status = status
-	_, err = s.clientRequestLog.Update(&backgroundContext, currentRequest)
-	if err != nil {
-		return err.Error
+	if currentRequest != nil {
+		currentRequest.ReferenceID = requestReferenceID
+		currentRequest.Status = status
+		_ = s.clientRequestLog.Update(&backgroundContext, currentRequest)
 	}
 
 	for _, clientRequest := range clientRequests {
