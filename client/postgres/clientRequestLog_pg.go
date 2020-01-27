@@ -178,9 +178,7 @@ func (s *ClientRequestLogPostgresStorage) Delete(ctx *context.Context, clientReq
 			Error:   err,
 			Type:    "pq-error",
 		})
-		return nil
 	}
-	return nil
 }
 
 // NewClientRequestLogPostgresStorage creates new client request log storage
