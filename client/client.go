@@ -235,7 +235,6 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	var clientRequestLog *ClientRequestLog
-	var errClientRequestLog *types.Error
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -369,7 +368,6 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		var clientRequestLog *ClientRequestLog
-		var errClientRequestLog *types.Error
 		tempCurrentAccount := appcontext.CurrentAccount(ctx)
 		if tempCurrentAccount == nil {
 			defaultValue := 0
