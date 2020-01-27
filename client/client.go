@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -178,6 +179,8 @@ func (c *HTTPClient) Do(req *http.Request) (string, *ResponseError) {
 		if err != nil {
 			errResponse.Error = err
 		}
+		errResponse.Error = errors.New(errResponse.Message)
+
 		return "", errResponse
 	}
 
