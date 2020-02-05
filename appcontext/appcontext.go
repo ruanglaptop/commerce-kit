@@ -147,7 +147,7 @@ func UserID(ctx *context.Context) *int {
 		v := userID.(int)
 		return &v
 	}
-	return 0
+	return nil
 }
 
 // CustomerID gets current logged-in UserID's CustomerID from customer-payfazz from context
