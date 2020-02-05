@@ -52,16 +52,16 @@ type ImmutableGenericStorage interface {
 
 // PostgresStorage is the postgres implementation of generic Storage
 type PostgresStorage struct {
-	db              Queryer
-	tableName       string
-	elemType        reflect.Type
-	isImmutable     bool
-	selectFields    string
-	insertFields    string
-	insertParams    string
-	updateSetFields string
+	db                  Queryer
+	tableName           string
+	elemType            reflect.Type
+	isImmutable         bool
+	selectFields        string
+	insertFields        string
+	insertParams        string
+	updateSetFields     string
 	updateManySetFields string
-	logStorage      LogStorage
+	logStorage          LogStorage
 }
 
 // LogStorage storage for logs
@@ -994,7 +994,7 @@ func (r *PostgresStorage) createLog(ctx *context.Context, params *ActivityLog) e
 	return nil
 }
 
-func getContextVariables(ctx *context.Context) (int, int, *int) {
+func getContextVariables(ctx *context.Context) (*int, int, *int) {
 	return appcontext.UserID(ctx), appcontext.CustomerID(ctx), appcontext.ClientID(ctx)
 }
 
@@ -1002,8 +1002,8 @@ func determineUser(ctx *context.Context) (int, string) {
 	userID, customerID, clientID := getContextVariables(ctx)
 	var resUserID int
 	var resUserType string
-	if userID != 0 {
-		resUserID = userID
+	if userID != nil {
+		resUserID = *userID
 		resUserType = "User"
 	} else if customerID != 0 {
 		resUserID = customerID
@@ -1034,16 +1034,16 @@ func NewLogStorage(db *sqlx.DB, logName string) *LogStorage {
 func NewPostgresStorage(db *sqlx.DB, tableName string, elem interface{}, cfg PostgresConfig, logStorage LogStorage) *PostgresStorage {
 	elemType := reflect.TypeOf(elem)
 	return &PostgresStorage{
-		db:              db,
-		tableName:       tableName,
-		elemType:        elemType,
-		isImmutable:     cfg.IsImmutable,
-		selectFields:    selectFields(elemType),
-		insertFields:    insertFields(elemType, cfg.IsImmutable),
-		insertParams:    insertParams(elemType, cfg.IsImmutable, 0),
-		updateSetFields: updateSetFields(elemType),
+		db:                  db,
+		tableName:           tableName,
+		elemType:            elemType,
+		isImmutable:         cfg.IsImmutable,
+		selectFields:        selectFields(elemType),
+		insertFields:        insertFields(elemType, cfg.IsImmutable),
+		insertParams:        insertParams(elemType, cfg.IsImmutable, 0),
+		updateSetFields:     updateSetFields(elemType),
 		updateManySetFields: updateManySetFields(elemType),
-		logStorage:      logStorage,
+		logStorage:          logStorage,
 	}
 }
 
