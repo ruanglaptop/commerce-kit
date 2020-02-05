@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/payfazz/commerce-kit/appcontext"
 )
@@ -12,9 +13,7 @@ import (
 // ParseQueryParams .
 func ParseQueryParams(path string, params interface{}) string {
 	baseURL, _ := url.Parse(path)
-
 	filterParams := baseURL.Query()
-
 	rval := reflect.Indirect(reflect.ValueOf(params))
 	rtype := rval.Type()
 
@@ -29,6 +28,15 @@ func ParseQueryParams(path string, params interface{}) string {
 				}
 			}
 			break
+
+		case reflect.String:
+			val := rval.Field(i).String()
+			val = strings.Replace(val, " ", "%20", -1)
+			if &val != nil && val != "" {
+				filterParams.Add(tag, fmt.Sprintf("%v", val))
+			}
+			break
+
 		default:
 			val := rval.Field(i)
 			if &val != nil {

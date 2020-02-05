@@ -56,6 +56,7 @@ var (
 	Bearer      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Bearer", HeaderTypeValue: "Bearer "})
 	AccessToken = AuthorizationType(AuthorizationTypeStruct{HeaderName: "X-Access-Token", HeaderType: "Auth0", HeaderTypeValue: ""})
 	Secret      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Secret", HeaderType: "", HeaderTypeValue: ""})
+	APIKey      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "APIKey", HeaderType: "APIKey", HeaderTypeValue: ""})
 )
 
 //
@@ -79,7 +80,7 @@ type GenericHTTPClient interface {
 	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithoutLog(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
-	CallClientWithCustomizedError(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithCustomizedError(ctx *context.Context, path string, method Method, queryParams interface{}, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	AddAuthentication(ctx *context.Context, authorizationType AuthorizationType)
 }
 
@@ -493,6 +494,123 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 	req.Header.Add("Content-Type", "application/json")
 
 	response, errDo = c.Do(req)
+	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		return errDo
+	}
+
+	if response != "" && result != nil {
+		err = json.Unmarshal([]byte(response), result)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	return errDo
+}
+
+// CallClientWithCustomizedError do call client with customized error
+func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path string, method Method, queryParams interface{}, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+	var jsonData []byte
+	var err error
+	var errDo *ResponseError
+
+	if request != nil {
+		jsonData, err = json.Marshal(request)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType == APIKey {
+			s := reflect.ValueOf(queryParams).Elem()
+			field := s.FieldByName("APIKey")
+			if field.IsValid() {
+				field.SetString(authorizationType.Token)
+				path = ParseQueryParams(path, queryParams)
+			}
+		}
+	}
+
+	urlPath, err := url.ParseRequestURI(fmt.Sprintf("%s/%s", c.APIURL, path))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	jsonBuffer := bytes.NewBuffer(jsonData)
+	req, err := http.NewRequest(string(method), urlPath.String(), jsonBuffer)
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType != APIKey {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	response, errDo := (func() (string, *ResponseError) {
+		var res *http.Response
+		var err error
+		for retry := 0; ; {
+			res, err = c.HTTPClient.Do(req)
+			if !c.shouldRetry(err, res, retry) {
+				break
+			}
+			sleepDuration := c.sleepTime(retry)
+			retry++
+			time.Sleep(sleepDuration)
+		}
+		if err != nil {
+			return "", &ResponseError{
+				Code:    "",
+				Message: "",
+				Fields:  nil,
+				Error:   err,
+			}
+		}
+		defer res.Body.Close()
+
+		resBody, err := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		if err != nil {
+			return "", &ResponseError{
+				Code:       string(res.StatusCode),
+				Message:    "",
+				Fields:     nil,
+				StatusCode: res.StatusCode,
+				Error:      err,
+			}
+		}
+
+		errResponse := &ResponseError{
+			Code:       string(res.StatusCode),
+			Message:    "",
+			Fields:     nil,
+			StatusCode: res.StatusCode,
+			Error:      nil,
+		}
+		if res.StatusCode < 200 || res.StatusCode >= 300 {
+			errResponse.Message = string(resBody)
+			errResponse.Error = errors.New(string(resBody))
+			return "", errResponse
+		}
+
+		return string(resBody), errResponse
+	})()
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
 		return errDo
 	}
