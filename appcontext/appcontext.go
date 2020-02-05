@@ -141,11 +141,11 @@ func CurrentClient(ctx *context.Context) *string {
 }
 
 // UserID gets current userId logged in from the context
-func UserID(ctx *context.Context) int {
+func UserID(ctx *context.Context) *int {
 	userID := (*ctx).Value(KeyUserID)
 	if userID != nil {
 		v := userID.(int)
-		return v
+		return &v
 	}
 	return 0
 }
