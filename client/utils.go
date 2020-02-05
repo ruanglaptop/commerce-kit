@@ -43,7 +43,7 @@ func ParseQueryParams(path string, params interface{}) string {
 	return baseURL.String()
 }
 
-func getContextVariables(ctx *context.Context) (int, int, *int) {
+func getContextVariables(ctx *context.Context) (*int, int, *int) {
 	return appcontext.UserID(ctx), appcontext.CustomerID(ctx), appcontext.ClientID(ctx)
 }
 
@@ -51,8 +51,8 @@ func determineClient(ctx *context.Context) (int, string) {
 	userID, customerID, clientID := getContextVariables(ctx)
 	var resUserID int
 	var resUserType string
-	if userID != 0 {
-		resUserID = userID
+	if userID != nil {
+		resUserID = *userID
 		resUserType = "User"
 	} else if customerID != 0 {
 		resUserID = customerID
