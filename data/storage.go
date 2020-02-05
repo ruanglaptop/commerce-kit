@@ -847,7 +847,7 @@ func (r *PostgresStorage) updateArgs(currentUserID int, existingElem interface{}
 // Delete not really deletes the elem from the db, but it will set the
 // "deletedAt" column to current time.
 func (r *PostgresStorage) Delete(ctx *context.Context, id interface{}) error {
-	currentUser, _ := appcontext.UserID(ctx)
+	currentUser := appcontext.UserID(ctx)
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -955,7 +955,7 @@ func (r *PostgresStorage) DeleteMany(ctx *context.Context, ids interface{}) erro
 }
 
 // CountAll is function to count all row datas in specific table in database
-func (r *PostgresStorage) CountAll(ctx context.Context, count interface{}) error {
+func (r *PostgresStorage) CountAll(ctx *context.Context, count interface{}) error {
 	var where string
 	db := r.db
 	tx, ok := TxFromContext(ctx)
