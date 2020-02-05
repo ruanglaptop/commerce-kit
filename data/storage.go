@@ -36,9 +36,9 @@ type GenericStorage interface {
 	UpdateMany(ctx *context.Context, elems interface{}) error
 	Delete(ctx *context.Context, id interface{}) error
 	DeleteMany(ctx *context.Context, ids interface{}) error
-	CountAll(ctx context.Context, count interface{}) error
-	HardDelete(ctx context.Context, id interface{}) error
-	ExecQuery(ctx context.Context, query string, args map[string]interface{}) error
+	CountAll(ctx *context.Context, count interface{}) error
+	HardDelete(ctx *context.Context, id interface{}) error
+	ExecQuery(ctx *context.Context, query string, args map[string]interface{}) error
 	SelectFirstWithQuery(ctx *context.Context, elem interface{}, query string, args map[string]interface{}) error
 }
 
