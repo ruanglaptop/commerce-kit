@@ -35,6 +35,10 @@ type GenericStorage interface {
 	Update(ctx *context.Context, elem interface{}) error
 	Delete(ctx *context.Context, id interface{}) error
 	DeleteMany(ctx *context.Context, ids interface{}) error
+	CountAll(ctx context.Context, count interface{}) error
+	HardDelete(ctx context.Context, id interface{}) error
+	ExecQuery(ctx context.Context, query string, args map[string]interface{}) error
+	SelectFirstWithQuery(ctx *context.Context, elem interface{}, query string, args map[string]interface{}) error
 }
 
 // ImmutableGenericStorage represents the immutable generic Storage
@@ -103,13 +107,13 @@ func (r *PostgresStorage) Single(ctx *context.Context, elem interface{}, where s
 	err = statement.Get(elem, arg)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			ErrNotFound = fmt.Errorf("%s in table %s", ErrNotFound, r.tableName)
 			return ErrNotFound
 		}
 		return err
 	}
 
 	return nil
-
 }
 
 // Where queries the elements according to the query & argument provided
@@ -220,8 +224,8 @@ func interfaceConversion(i interface{}) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
 
+	return res, nil
 }
 
 // Insert inserts a new element into the database.
@@ -274,6 +278,7 @@ func (r *PostgresStorage) Insert(ctx *context.Context, elem interface{}) error {
 	if err != nil {
 		fmt.Printf("\nError while write activitylog: %v\n", err)
 	}
+
 	return nil
 }
 
@@ -704,6 +709,7 @@ func (r *PostgresStorage) updateArgs(currentUserID int, existingElem interface{}
 // Delete not really deletes the elem from the db, but it will set the
 // "deletedAt" column to current time.
 func (r *PostgresStorage) Delete(ctx *context.Context, id interface{}) error {
+	currentUser, currentType := appcontext.CurrentUser(ctx)
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -711,7 +717,7 @@ func (r *PostgresStorage) Delete(ctx *context.Context, id interface{}) error {
 	}
 
 	statement, err := db.PrepareNamed(fmt.Sprintf(`
-		UPDATE "%s" SET "deletedAt" = :deletedAt WHERE "id" = :id RETURNING %s
+		UPDATE "%s" SET "deletedAt" = :deletedAt, "deletedBy" = :deletedBy WHERE "id" = :id RETURNING %s
 	`, r.tableName, r.selectFields))
 	if err != nil {
 		return err
@@ -721,6 +727,7 @@ func (r *PostgresStorage) Delete(ctx *context.Context, id interface{}) error {
 	deleteArgs := map[string]interface{}{
 		"id":        id,
 		"deletedAt": time.Now().UTC(),
+		"deletedBy": currentUser,
 	}
 	now := time.Now()
 	currentUserID, currentUserType := determineUser(ctx)
@@ -806,6 +813,110 @@ func (r *PostgresStorage) DeleteMany(ctx *context.Context, ids interface{}) erro
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// CountAll is function to count all row datas in specific table in database
+func (r *PostgresStorage) CountAll(ctx context.Context, count interface{}) error {
+	var where string
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	if !r.isImmutable {
+		where = fmt.Sprintf(`"deletedAt" IS NULL`)
+	}
+
+	q := fmt.Sprintf(`SELECT COUNT(*) FROM "%s" WHERE %s`, r.tableName, where)
+
+	err := db.Get(count, q)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ErrNotFound = fmt.Errorf("%s in table %s", ErrNotFound, r.tableName)
+			return ErrNotFound
+		}
+		return err
+	}
+
+	return nil
+}
+
+// HardDelete is function to hard deleting data into specific table in database
+func (r *PostgresStorage) HardDelete(ctx context.Context, id interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	statement, err := db.PrepareNamed(fmt.Sprintf(`
+		DELETE FROM "%s" WHERE "id" = :id
+	`, r.tableName))
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	deleteArgs := map[string]interface{}{
+		"id": id,
+	}
+	_, err = statement.Exec(deleteArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ExecQuery is function to only execute raw query into database
+func (r *PostgresStorage) ExecQuery(ctx context.Context, query string, args map[string]interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	statement, err := db.PrepareNamed(query)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(args)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SelectFirstWithQuery Customizable Query for Select only take the first row
+func (r *PostgresStorage) SelectFirstWithQuery(ctx *context.Context, elems interface{}, query string, arg map[string]interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	query, args, err := sqlx.Named(query, arg)
+	if err != nil {
+		return err
+	}
+
+	query, args, err = sqlx.In(query, args...)
+	if err != nil {
+		return err
+	}
+
+	query = db.Rebind(query)
+
+	err = db.Get(elems, query, args...)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -985,7 +1096,7 @@ func emptyTag(dbTag string) bool {
 }
 
 func readOnlyTag(dbTag string) bool {
-	readOnlyTags := []string{"id", "owner", "createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"}
+	readOnlyTags := []string{"id", "owner", "createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy", "deletedBy"}
 	for _, t := range readOnlyTags {
 		if dbTag == t {
 			return true
