@@ -847,7 +847,7 @@ func (r *PostgresStorage) updateArgs(currentUserID int, existingElem interface{}
 // Delete not really deletes the elem from the db, but it will set the
 // "deletedAt" column to current time.
 func (r *PostgresStorage) Delete(ctx *context.Context, id interface{}) error {
-	currentUser, currentType := appcontext.CurrentUser(ctx)
+	currentUser, _ := appcontext.UserID(ctx)
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -982,7 +982,7 @@ func (r *PostgresStorage) CountAll(ctx context.Context, count interface{}) error
 }
 
 // HardDelete is function to hard deleting data into specific table in database
-func (r *PostgresStorage) HardDelete(ctx context.Context, id interface{}) error {
+func (r *PostgresStorage) HardDelete(ctx *context.Context, id interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -1009,7 +1009,7 @@ func (r *PostgresStorage) HardDelete(ctx context.Context, id interface{}) error 
 }
 
 // ExecQuery is function to only execute raw query into database
-func (r *PostgresStorage) ExecQuery(ctx context.Context, query string, args map[string]interface{}) error {
+func (r *PostgresStorage) ExecQuery(ctx *context.Context, query string, args map[string]interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
