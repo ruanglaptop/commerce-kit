@@ -33,6 +33,7 @@ type GenericStorage interface {
 	InsertMany(ctx *context.Context, elem interface{}) error
 	InsertManyWithTime(ctx *context.Context, elem interface{}, createdAt time.Time) error
 	Update(ctx *context.Context, elem interface{}) error
+	UpdateMany(ctx *context.Context, elems interface{}) error
 	Delete(ctx *context.Context, id interface{}) error
 	DeleteMany(ctx *context.Context, ids interface{}) error
 	CountAll(ctx context.Context, count interface{}) error
@@ -63,6 +64,7 @@ type PostgresStorage struct {
 	insertFields    string
 	insertParams    string
 	updateSetFields string
+	updateManySetFields string
 	logStorage      LogStorage
 }
 
@@ -663,6 +665,142 @@ func (r *PostgresStorage) Update(ctx *context.Context, elem interface{}) error {
 	return nil
 }
 
+// UpdateMany updates the element in the database.
+// It will update the "updatedAt" field.
+func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) error {
+	currentUserID, _ := determineUser(ctx)
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	dbArgs := map[string]interface{}{}
+
+	sqlStr := fmt.Sprintf(`
+	UPDATE "%s" as "currentTable" 
+	SET
+		%s
+	FROM (VALUES
+	`, r.tableName, r.updateManySetFields)
+
+	datas := reflect.ValueOf(elems)
+
+	if datas.Kind() == reflect.Slice {
+		for i := 0; i < datas.Len(); i++ {
+			sqlStrIndex, arg := r.updateManyParams(currentUserID, datas.Index(i), i+1)
+			sqlStr += sqlStrIndex
+			if i == 0 {
+				dbArgs = arg
+			} else {
+				for k, v := range arg {
+					dbArgs[k] = v
+				}
+			}
+		}
+	}
+
+	if datas.Kind() == reflect.Map {
+		for key, element := range datas.MapKeys() {
+			sqlStrIndex, arg := r.updateManyParams(currentUserID, datas.MapIndex(element), key+1)
+			sqlStr += sqlStrIndex
+			if key == 0 {
+				dbArgs = arg
+			} else {
+				for k, v := range arg {
+					dbArgs[k] = v
+				}
+			}
+		}
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
+
+	sqlStr = fmt.Sprintf(`%s
+	) as "updatedTable"("updatedAt", "updatedBy", %s)
+	where cast("currentTable".id as int) = cast("updatedTable".id as int)
+	`, sqlStr, r.selectFields)
+
+	statement, err := db.PrepareNamed(sqlStr)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(dbArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, index int) (string, map[string]interface{}) {
+	sqlStr := fmt.Sprintf(`(cast(:updatedAt%d as timestamp),%d,`, index, currentUserID)
+
+	var v reflect.Value
+
+	res := map[string]interface{}{
+		"updatedAt": time.Now().UTC().Format(time.RFC3339),
+	}
+
+	if reflect.TypeOf(elem) == reflect.TypeOf(reflect.Value{}) {
+		data := elem.(reflect.Value)
+		v = reflect.Indirect(data)
+	} else {
+		v = reflect.ValueOf(elem).Elem()
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		dbTag := r.elemType.Field(i).Tag.Get("db")
+		if !emptyTag(dbTag) {
+			var typeMapString map[string]interface{}
+			var val interface{}
+			if v.Field(i).Type() == reflect.TypeOf(typeMapString) {
+				metadataBytes, err := json.Marshal(v.Field(i).Interface())
+				if err != nil {
+					val = "{}"
+				} else {
+					val = string(metadataBytes)
+				}
+			} else {
+				val = v.Field(i).Interface()
+			}
+
+			if dbTag == "createdAt" || dbTag == "updatedAt" || v.Field(i).Type() == reflect.TypeOf(time.Time{}) {
+				valTime := val.(time.Time)
+				val = valTime.Format(time.RFC3339)
+				sqlStr += fmt.Sprintf(`cast(:%s%d as timestamp),`, dbTag, index)
+				res[dbTag] = val
+			} else {
+				switch v.Field(i).Kind() {
+				case reflect.String:
+					if r.elemType.Field(i).Tag.Get("cast") != "" {
+						sqlStr += fmt.Sprintf(`cast('%s' as %s),`, val, r.elemType.Field(i).Tag.Get("cast"))
+					} else {
+						sqlStr += fmt.Sprintf(`'%s',`, val)
+					}
+					break
+				default:
+					sqlStr += fmt.Sprint(val, ",")
+					break
+				}
+			}
+		}
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
+
+	sqlStr += "),"
+
+	if index != 0 {
+		s := strconv.Itoa(index)
+		res = renamingKey(res, s)
+	}
+
+	return sqlStr, res
+}
+
 // it assumes the id column named "id"
 func (r *PostgresStorage) findID(elem interface{}) interface{} {
 	v := reflect.ValueOf(elem).Elem()
@@ -1015,6 +1153,7 @@ func NewPostgresStorage(db *sqlx.DB, tableName string, elem interface{}, cfg Pos
 		insertFields:    insertFields(elemType, cfg.IsImmutable),
 		insertParams:    insertParams(elemType, cfg.IsImmutable, 0),
 		updateSetFields: updateSetFields(elemType),
+		updateManySetFields: updateManySetFields(elemType),
 		logStorage:      logStorage,
 	}
 }
@@ -1079,6 +1218,19 @@ func updateSetFields(elemType reflect.Type) string {
 		}
 	}
 	return strings.Join(setFields, ",")
+}
+
+func updateManySetFields(elemType reflect.Type) string {
+	setManyFields := []string{`"updatedAt" = "updatedTable"."updatedAt"`, `"updatedBy" = "updatedTable"."updatedBy"`}
+	for i := 0; i < elemType.NumField(); i++ {
+		field := elemType.Field(i)
+		dbTag := field.Tag.Get("db")
+		if !readOnlyTag(dbTag) && !emptyTag(dbTag) {
+			setManyFields = append(setManyFields, fmt.Sprintf(`"%s" = "updatedTable"."%s"`, dbTag, dbTag))
+		}
+	}
+
+	return strings.Join(setManyFields, ",")
 }
 
 func idTag(dbTag string) bool {
