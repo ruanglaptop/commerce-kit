@@ -70,39 +70,6 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 
 			errorFields = append(errorFields, e)
 		}
-		break
-
-	case *json.UnmarshalTypeError:
-		error := err.(*json.UnmarshalTypeError)
-		msg := fmt.Sprintf("Cannot Unmarshal field %v.%v, Need %v, passed %v", error.Struct, error.Field, error.Type.String(), error.Value)
-		e := MakeFieldError(error.Field, msg)
-		errorFields = e
-		break
-
-	case *ClientError:
-		error := err.(*ClientError)
-		code = error.StatusCode
-		data = fmt.Sprintf("%s ( %s )", error.Message, error.ClientName)
-
-	case *TokenError:
-		error := err.(*TokenError)
-		code = http.StatusBadRequest
-		data = error.Error()
-
-	case *StorageNotFoundError:
-		error := err.(*StorageNotFoundError)
-		code = http.StatusNotFound
-		data = error.Error()
-
-	case *StorageAlreadyExistError:
-		error := err.(*StorageAlreadyExistError)
-		code = http.StatusUnprocessableEntity
-		data = error.Error()
-
-	case *ServiceError:
-		error := err.(*ServiceError)
-		code = error.StatusCode
-		data = error.Message
 	}
 
 	json.NewEncoder(w).Encode(ErrorResponse{
