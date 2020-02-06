@@ -78,6 +78,15 @@ const (
 
 	// KeyCurrentClient represents the Current Client in http server context
 	KeyCurrentClient contextKey = "CurrentClient"
+
+	// KeyCurrentClientAndType represents the Current Client in http server context
+	KeyCurrentClientAndType contextKey = "CurrentClientAndType"
+
+	// KeyCurrentUserAndType represents the Current User login in http server context
+	KeyCurrentUserAndType contextKey = "CurrentUserAndType"
+
+	// KeyCurrentCustomerAndType represents the Current Customer login in http server context
+	KeyCurrentCustomerAndType contextKey = "CurrentCustomerAndType"
 )
 
 // Owner gets the data owner from the context
@@ -316,4 +325,34 @@ func CurrentXAccessToken(ctx *context.Context) string {
 		return v
 	}
 	return ""
+}
+
+// CurrentClientAndType gets current client from the context
+func CurrentClientAndType(ctx context.Context) (int, types.TypeContext) {
+	currentClient := ctx.Value(KeyCurrentClient)
+	if currentClient != nil {
+		v := currentClient.(int)
+		return v, "client"
+	}
+	return 0,"system"
+}
+
+// CurrentUserAndType gets current user from the context
+func CurrentUserAndType(ctx *context.Context) (int, types.TypeContext) {
+	currentUser := ctx.Value(KeyCurrentUser)
+	if currentUser != nil {
+		v := currentUser.(int)
+		return v, "user"
+	}
+	return 0, "system"
+}
+
+// CurrentCustomerAndType gets current user from the context
+func CurrentCustomerAndType(ctx *context.Context) (int, types.TypeContext) {
+	currentCustomer := ctx.Value(KeyCurrentCustomer)
+	if currentCustomer != nil {
+		v := currentCustomer.(int)
+		return v, "customer"
+	}
+	return 0, "system"
 }
