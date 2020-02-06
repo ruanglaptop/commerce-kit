@@ -422,10 +422,12 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		response, errDo = c.Do(req)
-		if errDo != nil && (errDo.Error != nil || errDo.Message != "") && method != GET {
-			clientRequestLog.HTTPStatusCode = errDo.StatusCode
-			clientRequestLog.Status = "failed"
-			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+			if method != GET {
+				clientRequestLog.HTTPStatusCode = errDo.StatusCode
+				clientRequestLog.Status = "failed"
+				clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+			}
 
 			return errDo.Error
 		}
@@ -602,6 +604,41 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	}
 	req.Header.Add("Content-Type", "application/json")
 
+	clientID, clientType := determineClient(ctx)
+	requestRaw := types.Metadata{}
+	if request != nil {
+		err = json.Unmarshal(jsonData, &requestRaw)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	var clientRequestLog *ClientRequestLog
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
+
+	requestReferenceID := appcontext.RequestReferenceID(ctx)
+	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
+	if method != GET {
+		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+			ClientID:       clientID,
+			ClientType:     clientType,
+			Method:         string(method),
+			URL:            urlPath.String(),
+			Header:         fmt.Sprintf("%v", req.Header),
+			Request:        requestRaw,
+			Status:         "calling",
+			HTTPStatusCode: 0,
+			ReferenceID:    requestReferenceID,
+		})
+	}
+
 	response, errDo := (func() (string, *ResponseError) {
 		var res *http.Response
 		var err error
@@ -652,7 +689,50 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		return string(resBody), errResponse
 	})()
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		if method != GET {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+			clientRequestLog.Status = "failed"
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		}
+
 		return errDo
+	}
+
+	type TransactionID struct {
+		ID int `json:"id"`
+	}
+	var transactionID TransactionID
+	json.Unmarshal([]byte(response), &transactionID)
+
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+		if errDo != nil {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		}
+		clientRequestLog.Status = "success"
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+
+		requestStatus := appcontext.RequestStatus(ctx)
+		if requestStatus == nil && isAcknowledgeNeeded {
+			currentClientRequests := []*ClientRequest{}
+			temp := appcontext.ClientRequests(ctx)
+			if temp != nil {
+				currentClientRequests = temp.([]*ClientRequest)
+			}
+			currentClientRequests = append(currentClientRequests, &ClientRequest{
+				Client:  c,
+				Request: clientRequestLog,
+			})
+			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
+			// ignore when error occurs
+			_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
+				RequestID:          clientRequestLog.ID,
+				CommitStatus:       "on_progress",
+				ReservedHolder:     requestRaw,
+				ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
+				Message:            "",
+			})
+		}
 	}
 
 	if response != "" && result != nil {
