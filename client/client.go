@@ -670,10 +670,11 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 // AddAuthentication do add authentication
 func (c *HTTPClient) AddAuthentication(ctx *context.Context, authorizationType AuthorizationType) {
 	isExist := false
-	for _, _authorizationType := range c.AuthorizationTypes {
-		if _authorizationType.HeaderType == authorizationType.HeaderType {
-			_authorizationType.Token = authorizationType.Token
+	for key, singleAuthorizationType := range c.AuthorizationTypes {
+		if singleAuthorizationType.HeaderType == authorizationType.HeaderType {
+			c.AuthorizationTypes[key].Token = authorizationType.Token
 			isExist = true
+			break
 		}
 	}
 
