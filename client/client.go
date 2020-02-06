@@ -206,6 +206,17 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		}
 	}
 
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType == APIKey {
+			s := reflect.ValueOf(queryParams).Elem()
+			field := s.FieldByName("APIKey")
+			if field.IsValid() {
+				field.SetString(authorizationType.Token)
+				path = ParseQueryParams(path, queryParams)
+			}
+		}
+	}
+
 	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
 	if err != nil {
 		errDo = &ResponseError{
@@ -223,7 +234,9 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -339,6 +352,17 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 			}
 		}
 
+		for _, authorizationType := range c.AuthorizationTypes {
+			if authorizationType == APIKey {
+				s := reflect.ValueOf(queryParams).Elem()
+				field := s.FieldByName("APIKey")
+				if field.IsValid() {
+					field.SetString(authorizationType.Token)
+					path = ParseQueryParams(path, queryParams)
+				}
+			}
+		}
+
 		urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
 		if err != nil {
 			errDo = &ResponseError{
@@ -356,7 +380,9 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		for _, authorizationType := range c.AuthorizationTypes {
-			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+			if authorizationType.HeaderType != "APIKey" {
+				req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+			}
 		}
 		req.Header.Add("Content-Type", "application/json")
 
@@ -472,6 +498,17 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 		}
 	}
 
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType == APIKey {
+			s := reflect.ValueOf(queryParams).Elem()
+			field := s.FieldByName("APIKey")
+			if field.IsValid() {
+				field.SetString(authorizationType.Token)
+				path = ParseQueryParams(path, queryParams)
+			}
+		}
+	}
+
 	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
 	if err != nil {
 		errDo = &ResponseError{
@@ -489,7 +526,9 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -556,7 +595,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType != APIKey {
+		if authorizationType.HeaderType != "APIKey" {
 			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 		}
 	}
