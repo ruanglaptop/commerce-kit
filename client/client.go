@@ -206,17 +206,6 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		}
 	}
 
-	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType == APIKey {
-			s := reflect.ValueOf(queryParams).Elem()
-			field := s.FieldByName("APIKey")
-			if field.IsValid() {
-				field.SetString(authorizationType.Token)
-				path = ParseQueryParams(path, queryParams)
-			}
-		}
-	}
-
 	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
 	if err != nil {
 		errDo = &ResponseError{
@@ -350,17 +339,6 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 					Error: err,
 				}
 				return errDo.Error
-			}
-		}
-
-		for _, authorizationType := range c.AuthorizationTypes {
-			if authorizationType == APIKey {
-				s := reflect.ValueOf(queryParams).Elem()
-				field := s.FieldByName("APIKey")
-				if field.IsValid() {
-					field.SetString(authorizationType.Token)
-					path = ParseQueryParams(path, queryParams)
-				}
 			}
 		}
 
@@ -498,17 +476,6 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 				Error: err,
 			}
 			return errDo
-		}
-	}
-
-	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType == APIKey {
-			s := reflect.ValueOf(queryParams).Elem()
-			field := s.FieldByName("APIKey")
-			if field.IsValid() {
-				field.SetString(authorizationType.Token)
-				path = ParseQueryParams(path, queryParams)
-			}
 		}
 	}
 
