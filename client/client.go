@@ -341,6 +341,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 	var response string
 	var errDo *ResponseError
 
+	Sethystrix(c.ClientName)
 	err = hystrix.Do(c.ClientName, func() error {
 		if request != nil {
 			jsonData, err = json.Marshal(request)
