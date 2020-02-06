@@ -55,7 +55,7 @@ var (
 	Basic       = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Basic", HeaderTypeValue: "Basic "})
 	Bearer      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Bearer", HeaderTypeValue: "Bearer "})
 	AccessToken = AuthorizationType(AuthorizationTypeStruct{HeaderName: "X-Access-Token", HeaderType: "Auth0", HeaderTypeValue: ""})
-	Secret      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Secret", HeaderType: "", HeaderTypeValue: ""})
+	Secret      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Secret", HeaderType: "Secret", HeaderTypeValue: ""})
 	APIKey      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "APIKey", HeaderType: "APIKey", HeaderTypeValue: ""})
 )
 
@@ -630,7 +630,17 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 
 // AddAuthentication do add authentication
 func (c *HTTPClient) AddAuthentication(ctx *context.Context, authorizationType AuthorizationType) {
-	c.AuthorizationTypes = append(c.AuthorizationTypes, authorizationType)
+	isExist := false
+	for _, _authorizationType := range c.AuthorizationTypes {
+		if _authorizationType.HeaderType == authorizationType.HeaderType {
+			_authorizationType.Token = authorizationType.Token
+			isExist = true
+		}
+	}
+
+	if isExist == false {
+		c.AuthorizationTypes = append(c.AuthorizationTypes, authorizationType)
+	}
 }
 
 // NewHTTPClient creates the new http client
