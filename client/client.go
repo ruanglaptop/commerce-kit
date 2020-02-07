@@ -55,7 +55,7 @@ var (
 	Basic       = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Basic", HeaderTypeValue: "Basic "})
 	Bearer      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Authorization", HeaderType: "Bearer", HeaderTypeValue: "Bearer "})
 	AccessToken = AuthorizationType(AuthorizationTypeStruct{HeaderName: "X-Access-Token", HeaderType: "Auth0", HeaderTypeValue: ""})
-	Secret      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Secret", HeaderType: "", HeaderTypeValue: ""})
+	Secret      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "Secret", HeaderType: "Secret", HeaderTypeValue: ""})
 	APIKey      = AuthorizationType(AuthorizationTypeStruct{HeaderName: "APIKey", HeaderType: "APIKey", HeaderTypeValue: ""})
 )
 
@@ -223,7 +223,9 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -328,6 +330,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 	var response string
 	var errDo *ResponseError
 
+	Sethystrix(c.ClientName)
 	err = hystrix.Do(c.ClientName, func() error {
 		if request != nil {
 			jsonData, err = json.Marshal(request)
@@ -356,7 +359,9 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		for _, authorizationType := range c.AuthorizationTypes {
-			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+			if authorizationType.HeaderType != "APIKey" {
+				req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+			}
 		}
 		req.Header.Add("Content-Type", "application/json")
 
@@ -395,10 +400,12 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 		}
 
 		response, errDo = c.Do(req)
-		if errDo != nil && (errDo.Error != nil || errDo.Message != "") && method != GET {
-			clientRequestLog.HTTPStatusCode = errDo.StatusCode
-			clientRequestLog.Status = "failed"
-			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+			if method != GET {
+				clientRequestLog.HTTPStatusCode = errDo.StatusCode
+				clientRequestLog.Status = "failed"
+				clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+			}
 
 			return errDo.Error
 		}
@@ -489,7 +496,9 @@ func (c *HTTPClient) CallClientWithoutLog(ctx *context.Context, path string, met
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
 	}
 	req.Header.Add("Content-Type", "application/json")
 
@@ -556,11 +565,46 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType != APIKey {
+		if authorizationType.HeaderType != "APIKey" {
 			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
 		}
 	}
 	req.Header.Add("Content-Type", "application/json")
+
+	clientID, clientType := determineClient(ctx)
+	requestRaw := types.Metadata{}
+	if request != nil {
+		err = json.Unmarshal(jsonData, &requestRaw)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	var clientRequestLog *ClientRequestLog
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
+
+	requestReferenceID := appcontext.RequestReferenceID(ctx)
+	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
+	if method != GET {
+		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+			ClientID:       clientID,
+			ClientType:     clientType,
+			Method:         string(method),
+			URL:            urlPath.String(),
+			Header:         fmt.Sprintf("%v", req.Header),
+			Request:        requestRaw,
+			Status:         "calling",
+			HTTPStatusCode: 0,
+			ReferenceID:    requestReferenceID,
+		})
+	}
 
 	response, errDo := (func() (string, *ResponseError) {
 		var res *http.Response
@@ -612,7 +656,50 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		return string(resBody), errResponse
 	})()
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		if method != GET {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+			clientRequestLog.Status = "failed"
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		}
+
 		return errDo
+	}
+
+	type TransactionID struct {
+		ID int `json:"id"`
+	}
+	var transactionID TransactionID
+	json.Unmarshal([]byte(response), &transactionID)
+
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+		if errDo != nil {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		}
+		clientRequestLog.Status = "success"
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+
+		requestStatus := appcontext.RequestStatus(ctx)
+		if requestStatus == nil && isAcknowledgeNeeded {
+			currentClientRequests := []*ClientRequest{}
+			temp := appcontext.ClientRequests(ctx)
+			if temp != nil {
+				currentClientRequests = temp.([]*ClientRequest)
+			}
+			currentClientRequests = append(currentClientRequests, &ClientRequest{
+				Client:  c,
+				Request: clientRequestLog,
+			})
+			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
+			// ignore when error occurs
+			_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
+				RequestID:          clientRequestLog.ID,
+				CommitStatus:       "on_progress",
+				ReservedHolder:     requestRaw,
+				ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
+				Message:            "",
+			})
+		}
 	}
 
 	if response != "" && result != nil {
@@ -630,7 +717,18 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 
 // AddAuthentication do add authentication
 func (c *HTTPClient) AddAuthentication(ctx *context.Context, authorizationType AuthorizationType) {
-	c.AuthorizationTypes = append(c.AuthorizationTypes, authorizationType)
+	isExist := false
+	for key, singleAuthorizationType := range c.AuthorizationTypes {
+		if singleAuthorizationType.HeaderType == authorizationType.HeaderType {
+			c.AuthorizationTypes[key].Token = authorizationType.Token
+			isExist = true
+			break
+		}
+	}
+
+	if isExist == false {
+		c.AuthorizationTypes = append(c.AuthorizationTypes, authorizationType)
+	}
 }
 
 // NewHTTPClient creates the new http client

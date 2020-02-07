@@ -334,9 +334,9 @@ func CurrentClientAndType(ctx *context.Context) (int, types.TypeContext) {
 	currentClient := (*ctx).Value(KeyCurrentClientAndType)
 	if currentClient != nil {
 		v := currentClient.(int)
-		return v, "client"
+		return v, types.CLIENT
 	}
-	return 0, "system"
+	return 0, types.SYSTEM
 }
 
 // CurrentUserAndType gets current user from the context
@@ -344,9 +344,9 @@ func CurrentUserAndType(ctx *context.Context) (int, types.TypeContext) {
 	currentUser := (*ctx).Value(KeyCurrentUserAndType)
 	if currentUser != nil {
 		v := currentUser.(int)
-		return v, "user"
+		return v, types.USER
 	}
-	return 0, "system"
+	return 0, types.SYSTEM
 }
 
 // CurrentCustomerAndType gets current user from the context
@@ -354,7 +354,7 @@ func CurrentCustomerAndType(ctx *context.Context) (int, types.TypeContext) {
 	currentCustomer := (*ctx).Value(KeyCurrentCustomerAndType)
 	if currentCustomer != nil {
 		v := currentCustomer.(int)
-		return v, "customer"
+		return v, types.CUSTOMER
 	}
-	return 0, "system"
+	return 0, types.SYSTEM
 }
