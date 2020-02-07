@@ -528,7 +528,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	}
 
 	for _, authorizationType := range c.AuthorizationTypes {
-		if authorizationType == APIKey {
+		if authorizationType.HeaderName == "APIKey" {
 			s := reflect.ValueOf(queryParams).Elem()
 			field := s.FieldByName("APIKey")
 			if field.IsValid() {
