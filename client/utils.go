@@ -37,6 +37,13 @@ func ParseQueryParams(path string, params interface{}) string {
 			}
 			break
 
+		case reflect.Ptr:
+			if rval.Field(i).Elem().IsValid() {
+				val := rval.Field(i)
+				filterParams.Add(tag, fmt.Sprintf("%v", val))
+			}
+			break
+
 		default:
 			val := rval.Field(i)
 			if &val != nil {
