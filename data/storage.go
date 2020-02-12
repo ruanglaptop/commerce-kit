@@ -754,8 +754,9 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 	for i := 0; i < v.NumField(); i++ {
 		dbTag := r.elemType.Field(i).Tag.Get("db")
 		if !emptyTag(dbTag) {
-			var typeMapString map[string]interface{}
+			var typeMapString types.Metadata
 			var val interface{}
+			var typeTime time.Time
 			if v.Field(i).Type() == reflect.TypeOf(typeMapString) {
 				metadataBytes, err := json.Marshal(v.Field(i).Interface())
 				if err != nil {
@@ -764,16 +765,29 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 					val = string(metadataBytes)
 				}
 			} else {
-				val = v.Field(i).Interface()
+				if v.Field(i).Kind() == reflect.Ptr {
+					val = v.Field(i).Elem().Interface()
+				} else {
+					val = v.Field(i).Interface()
+				}
 			}
 
-			if dbTag == "createdAt" || dbTag == "updatedAt" || v.Field(i).Type() == reflect.TypeOf(time.Time{}) {
+			if dbTag == "createdAt" || dbTag == "updatedAt" || v.Field(i).Type() == reflect.TypeOf(typeTime) {
 				valTime := val.(time.Time)
 				val = valTime.Format(time.RFC3339)
 				sqlStr += fmt.Sprintf(`cast(:%s%d as timestamp),`, dbTag, index)
 				res[dbTag] = val
+			} else if v.Field(i).Type() == reflect.TypeOf(typeMapString) {
+				sqlStr += fmt.Sprintf(`cast(:%s%d as jsonb),`, dbTag, index)
+				res[dbTag] = val
 			} else {
-				switch v.Field(i).Kind() {
+				var field reflect.Value
+				if v.Field(i).Kind() == reflect.Ptr {
+					field = v.Field(i).Elem()
+				} else {
+					field = v.Field(i)
+				}
+				switch field.Kind() {
 				case reflect.String:
 					if r.elemType.Field(i).Tag.Get("cast") != "" {
 						sqlStr += fmt.Sprintf(`cast('%s' as %s),`, val, r.elemType.Field(i).Tag.Get("cast"))
