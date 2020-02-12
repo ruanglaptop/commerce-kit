@@ -12,6 +12,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/payfazz/commerce-kit/appcontext"
+	"github.com/payfazz/commerce-kit/types"
 )
 
 //ErrNotEnough declare specific error for Not Enough
@@ -757,36 +758,32 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 			var typeMapString types.Metadata
 			var val interface{}
 			var typeTime time.Time
-			if v.Field(i).Type() == reflect.TypeOf(typeMapString) {
-				metadataBytes, err := json.Marshal(v.Field(i).Interface())
+			var field reflect.Value
+			if v.Field(i).Kind() == reflect.Ptr {
+				field = v.Field(i).Elem()
+			} else {
+				field = v.Field(i)
+			}
+			if field.Type() == reflect.TypeOf(typeMapString) {
+				metadataBytes, err := json.Marshal(field.Interface())
 				if err != nil {
 					val = "{}"
 				} else {
 					val = string(metadataBytes)
 				}
 			} else {
-				if v.Field(i).Kind() == reflect.Ptr {
-					val = v.Field(i).Elem().Interface()
-				} else {
-					val = v.Field(i).Interface()
-				}
+				val = field.Interface()
 			}
 
-			if dbTag == "createdAt" || dbTag == "updatedAt" || v.Field(i).Type() == reflect.TypeOf(typeTime) {
+			if dbTag == "createdAt" || dbTag == "updatedAt" || field.Type() == reflect.TypeOf(typeTime) {
 				valTime := val.(time.Time)
 				val = valTime.Format(time.RFC3339)
 				sqlStr += fmt.Sprintf(`cast(:%s%d as timestamp),`, dbTag, index)
 				res[dbTag] = val
-			} else if v.Field(i).Type() == reflect.TypeOf(typeMapString) {
+			} else if field.Type() == reflect.TypeOf(typeMapString) {
 				sqlStr += fmt.Sprintf(`cast(:%s%d as jsonb),`, dbTag, index)
 				res[dbTag] = val
 			} else {
-				var field reflect.Value
-				if v.Field(i).Kind() == reflect.Ptr {
-					field = v.Field(i).Elem()
-				} else {
-					field = v.Field(i)
-				}
 				switch field.Kind() {
 				case reflect.String:
 					if r.elemType.Field(i).Tag.Get("cast") != "" {
