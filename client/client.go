@@ -181,7 +181,7 @@ func (c *HTTPClient) Do(req *http.Request) (string, *ResponseError) {
 		if err != nil {
 			errResponse.Error = err
 		}
-		errResponse.Error = errors.New(errResponse.Message)
+		errResponse.Error = fmt.Errorf("Error while calling %s: %v", req.URL.String(), errResponse.Message)
 
 		return "", errResponse
 	}

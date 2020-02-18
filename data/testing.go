@@ -53,7 +53,7 @@ func TestTruncateAll(t *testing.T, connectionInfo string, databaseName string) {
 		rows.Scan(&tableName)
 		tableNames = append(tableNames, tableName)
 	}
-	_, err = db.Exec("TRUNCATE TABLE \"" + strings.Join(tableNames, "\",\"") + "\" CASCADE")
+	_, err = db.Exec("TRUNCATE TABLE \"" + strings.Join(tableNames, "\",\"") + "\" RESTART IDENTITY CASCADE")
 	if err != nil {
 		t.Fatalf("failed to truncate all tables: %v", err)
 	}
