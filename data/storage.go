@@ -687,16 +687,34 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 
 	datas := reflect.ValueOf(elems)
 
+	limit := 2000
+	indexData := 0
 	if datas.Kind() == reflect.Slice {
 		for i := 0; i < datas.Len(); i++ {
 			sqlStrIndex, arg := r.updateManyParams(currentUserID, datas.Index(i), i+1)
 			sqlStr += sqlStrIndex
-			if i == 0 {
+			if indexData == 0 {
 				dbArgs = arg
 			} else {
 				for k, v := range arg {
 					dbArgs[k] = v
 				}
+			}
+			indexData++
+			if indexData == limit {
+				err := r.updateData(ctx, sqlStr, dbArgs)
+				if err != nil {
+					return err
+				}
+
+				indexData = 0
+				sqlStr = fmt.Sprintf(`
+				UPDATE "%s" as "currentTable" 
+				SET
+					%s
+				FROM (VALUES
+				`, r.tableName, r.updateManySetFields)
+				dbArgs = map[string]interface{}{}
 			}
 		}
 	}
@@ -705,14 +723,58 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 		for key, element := range datas.MapKeys() {
 			sqlStrIndex, arg := r.updateManyParams(currentUserID, datas.MapIndex(element), key+1)
 			sqlStr += sqlStrIndex
-			if key == 0 {
+			if indexData == 0 {
 				dbArgs = arg
 			} else {
 				for k, v := range arg {
 					dbArgs[k] = v
 				}
 			}
+			indexData++
+			if indexData == limit {
+				err := r.updateData(ctx, sqlStr, dbArgs)
+				if err != nil {
+					return err
+				}
+
+				indexData = 0
+				sqlStr = fmt.Sprintf(`
+				UPDATE "%s" as "currentTable" 
+				SET
+					%s
+				FROM (VALUES
+				`, r.tableName, r.updateManySetFields)
+				dbArgs = map[string]interface{}{}
+			}
 		}
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
+
+	sqlStr = fmt.Sprintf(`%s
+	) as "updatedTable"("updatedAt", "updatedBy", %s)
+	where cast("currentTable".id as int) = cast("updatedTable".id as int)
+	`, sqlStr, r.selectFields)
+
+	statement, err := db.PrepareNamed(sqlStr)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(dbArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
 	}
 
 	sqlStr = strings.TrimSuffix(sqlStr, ",")
