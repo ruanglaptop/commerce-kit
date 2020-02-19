@@ -27,6 +27,8 @@ var (
 type GenericStorage interface {
 	Single(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error
 	Where(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error
+	SinglePOSTEMP(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error
+	WherePOSTEMP(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error
 	SelectWithQuery(ctx *context.Context, elem interface{}, query string, args map[string]interface{}) error
 	FindByID(ctx *context.Context, elem interface{}, id interface{}) error
 	FindAll(ctx *context.Context, elems interface{}, page int, limit int) error
@@ -119,6 +121,42 @@ func (r *PostgresStorage) Single(ctx *context.Context, elem interface{}, where s
 	return nil
 }
 
+// SinglePOSTEMP queries an element according to the query & argument provided
+func (r *PostgresStorage) SinglePOSTEMP(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+	currentAccount := appcontext.CurrentAccount(ctx)
+
+	if !r.isImmutable {
+		where = fmt.Sprintf(`"deletedAt" IS NULL AND %s`, where)
+	}
+	if currentAccount != nil {
+		where = fmt.Sprintf(`"userId" = :currentAccount AND %s`, where)
+	}
+	arg["currentAccount"] = currentAccount
+
+	statement, err := db.PrepareNamed(fmt.Sprintf(`SELECT %s FROM "%s" WHERE %s`,
+		r.selectFields, r.tableName, where))
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	err = statement.Get(elem, arg)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ErrNotFound = fmt.Errorf("data is not found in table %s", r.tableName)
+			return ErrNotFound
+		}
+		return err
+	}
+
+	return nil
+}
+
 // Where queries the elements according to the query & argument provided
 func (r *PostgresStorage) Where(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error {
 	db := r.db
@@ -133,6 +171,44 @@ func (r *PostgresStorage) Where(ctx *context.Context, elems interface{}, where s
 	}
 	if currentAccount != nil {
 		where = fmt.Sprintf(`"owner" = :currentAccount AND %s`, where)
+	}
+	arg["currentAccount"] = currentAccount
+
+	query := fmt.Sprintf(`SELECT %s FROM "%s" WHERE %s`, r.selectFields, r.tableName, where)
+	query, args, err := sqlx.Named(query, arg)
+	if err != nil {
+		return err
+	}
+
+	query, args, err = sqlx.In(query, args...)
+	if err != nil {
+		return err
+	}
+
+	query = db.Rebind(query)
+
+	err = db.Select(elems, query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// WherePOSTEMP queries the elements according to the query & argument provided
+func (r *PostgresStorage) WherePOSTEMP(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+	currentAccount := appcontext.CurrentAccount(ctx)
+
+	if !r.isImmutable {
+		where = fmt.Sprintf(`"deletedAt" IS NULL AND %s`, where)
+	}
+	if currentAccount != nil {
+		where = fmt.Sprintf(`"userId" = :currentAccount AND %s`, where)
 	}
 	arg["currentAccount"] = currentAccount
 
