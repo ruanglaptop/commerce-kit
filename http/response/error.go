@@ -70,6 +70,7 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 
 			errorFields = append(errorFields, e)
 		}
+		errorCode = "BadRequest"
 	}
 
 	json.NewEncoder(w).Encode(ErrorResponse{
@@ -130,6 +131,7 @@ func AdvancedError(w http.ResponseWriter, slackNotifier notif.Notifier, logNotif
 			errorFields = append(errorFields,
 				MakeFieldError(err.Field(), err.ActualTag()))
 		}
+		errorCode = "BadRequest"
 	}
 
 	bytes := []byte(err.Params)
