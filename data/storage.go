@@ -134,7 +134,7 @@ func (r *PostgresStorage) SinglePOSTEMP(ctx *context.Context, elem interface{}, 
 		where = fmt.Sprintf(`"deletedAt" IS NULL AND %s`, where)
 	}
 	if currentAccount != nil {
-		where = fmt.Sprintf(`"userId" = :currentAccount AND %s`, where)
+		where = fmt.Sprintf(`("userId" = :currentAccount OR "owner" = :currentAccount) AND %s`, where)
 	}
 	arg["currentAccount"] = currentAccount
 
@@ -208,7 +208,7 @@ func (r *PostgresStorage) WherePOSTEMP(ctx *context.Context, elems interface{}, 
 		where = fmt.Sprintf(`"deletedAt" IS NULL AND %s`, where)
 	}
 	if currentAccount != nil {
-		where = fmt.Sprintf(`"userId" = :currentAccount AND %s`, where)
+		where = fmt.Sprintf(`("userId" = :currentAccount OR "owner" = :currentAccount) AND %s`, where)
 	}
 	arg["currentAccount"] = currentAccount
 
