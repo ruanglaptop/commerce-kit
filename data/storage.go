@@ -370,7 +370,7 @@ func (r *PostgresStorage) insertArgs(currentAccount *int, currentUserID int, ele
 
 	if !r.isImmutable {
 		res["updatedAt"] = time.Now().UTC()
-		res["updatedBy"] = nil
+		res["updatedBy"] = currentUserID,
 	}
 	var v reflect.Value
 
