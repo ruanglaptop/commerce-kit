@@ -39,10 +39,8 @@ func MakeFieldError(field string, message string) *FieldError {
 
 // Error writes error http response
 func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err types.Error) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
 	var errorCode string
+
 	switch status {
 	case http.StatusUnauthorized:
 		errorCode = "Unauthorized"
@@ -62,7 +60,6 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 
 	switch err.Error.(type) {
 	case validator.ValidationErrors:
-		data = "Bad Request"
 		for _, err := range err.Error.(validator.ValidationErrors) {
 			e := MakeFieldError(
 				err.Field(),
@@ -70,9 +67,14 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 
 			errorFields = append(errorFields, e)
 		}
+
+		data = "Bad Request"
 		errorCode = "BadRequest"
-		w.WriteHeader(http.StatusBadRequest)
+		status = http.StatusBadRequest
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 
 	json.NewEncoder(w).Encode(ErrorResponse{
 		Code:    errorCode,
@@ -108,10 +110,8 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 
 // AdvancedError writes error http response with params
 func AdvancedError(w http.ResponseWriter, slackNotifier notif.Notifier, logNotifier notif.Notifier, status int, err *types.Error) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-
 	var errorCode string
+
 	switch status {
 	case http.StatusUnauthorized:
 		errorCode = "Unauthorized"
@@ -133,12 +133,15 @@ func AdvancedError(w http.ResponseWriter, slackNotifier notif.Notifier, logNotif
 				MakeFieldError(err.Field(), err.ActualTag()))
 		}
 		errorCode = "BadRequest"
-		w.WriteHeader(http.StatusBadRequest)
+		status = http.StatusBadRequest
 	}
 
 	bytes := []byte(err.Params)
 	params := map[string]interface{}{}
 	json.Unmarshal(bytes, &params)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
 
 	if status == http.StatusInternalServerError {
 		json.NewEncoder(w).Encode(ErrorResponse{
