@@ -760,8 +760,8 @@ func NewHTTPClient(
 // Sethystrix setting for client
 func Sethystrix(nameClient string) {
 	hystrix.ConfigureCommand(nameClient, hystrix.CommandConfig{
-		Timeout:               10000,
-		MaxConcurrentRequests: 30,
-		ErrorPercentThreshold: 15,
+		Timeout:               5000,
+		MaxConcurrentRequests: 100,
+		ErrorPercentThreshold: 20,
 	})
 }
