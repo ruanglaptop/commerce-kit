@@ -112,7 +112,6 @@ func (r *PostgresStorage) Single(ctx *context.Context, elem interface{}, where s
 	err = statement.Get(elem, arg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ErrNotFound = fmt.Errorf("data is not found")
 			return ErrNotFound
 		}
 		return err
@@ -148,7 +147,6 @@ func (r *PostgresStorage) SinglePOSTEMP(ctx *context.Context, elem interface{}, 
 	err = statement.Get(elem, arg)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ErrNotFound = fmt.Errorf("data is not found")
 			return ErrNotFound
 		}
 		return err
@@ -1121,7 +1119,6 @@ func (r *PostgresStorage) CountAll(ctx *context.Context, count interface{}) erro
 	err := db.Get(count, q)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			ErrNotFound = fmt.Errorf("data is not found")
 			return ErrNotFound
 		}
 		return err
