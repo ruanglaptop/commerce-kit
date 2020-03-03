@@ -76,6 +76,7 @@ var httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 
 // GenericHTTPClient represents an interface to generalize an object to implement HTTPClient
 type GenericHTTPClient interface {
+	GetBaseURL() string
 	Do(req *http.Request) (string, *ResponseError)
 	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
@@ -94,6 +95,11 @@ type HTTPClient struct {
 	UseNormalSleep            bool
 	AuthorizationTypes        []AuthorizationType
 	ClientName                string
+}
+
+// GetBaseURL collect base url of specific client
+func (c *HTTPClient) GetBaseURL() string {
+	return c.APIURL
 }
 
 func (c *HTTPClient) shouldRetry(err error, res *http.Response, retry int) bool {
