@@ -3,12 +3,10 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/payfazz/commerce-kit/appcontext"
 	"github.com/payfazz/commerce-kit/client"
 	"github.com/payfazz/commerce-kit/data"
-	"github.com/payfazz/commerce-kit/logperform"
 	"github.com/payfazz/commerce-kit/types"
 )
 
@@ -19,19 +17,6 @@ type ClientRequestLogPostgresStorage struct {
 
 // FindAll get list of client request logs
 func (s *ClientRequestLogPostgresStorage) FindAll(ctx *context.Context, params *client.FindAllClientRequestLogs) []*client.ClientRequestLog {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "FindAll"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	clientRequestLog := []*client.ClientRequestLog{}
 	currentAccount := appcontext.CurrentAccount(ctx)
 	var err error
@@ -70,19 +55,6 @@ func (s *ClientRequestLogPostgresStorage) FindAll(ctx *context.Context, params *
 
 // FindByID get client request log by its id
 func (s *ClientRequestLogPostgresStorage) FindByID(ctx *context.Context, clientRequestLogID int) *client.ClientRequestLog {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "FindByID"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	var clientRequestLog client.ClientRequestLog
 	err := s.repository.FindByID(ctx, &clientRequestLog, clientRequestLogID)
 	if err != nil {
@@ -99,19 +71,6 @@ func (s *ClientRequestLogPostgresStorage) FindByID(ctx *context.Context, clientR
 
 // Insert create a new client request log
 func (s *ClientRequestLogPostgresStorage) Insert(ctx *context.Context, clientRequestLog *client.ClientRequestLog) *client.ClientRequestLog {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "Insert"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	err := s.repository.Insert(ctx, clientRequestLog)
 	if err != nil {
 		fmt.Printf(`Error while inserting "clientRequestLog": %v`, types.Error{
@@ -128,19 +87,6 @@ func (s *ClientRequestLogPostgresStorage) Insert(ctx *context.Context, clientReq
 
 // Update update a client request log
 func (s *ClientRequestLogPostgresStorage) Update(ctx *context.Context, clientRequestLog *client.ClientRequestLog) *client.ClientRequestLog {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "Update"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	err := s.repository.Update(ctx, clientRequestLog)
 	if err != nil {
 		fmt.Printf(`Error while updating "clientRequestLog": %v`, types.Error{
@@ -157,19 +103,6 @@ func (s *ClientRequestLogPostgresStorage) Update(ctx *context.Context, clientReq
 
 // Delete delete a client request log
 func (s *ClientRequestLogPostgresStorage) Delete(ctx *context.Context, clientRequestLogID int) {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "Delete"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	err := s.repository.Delete(ctx, clientRequestLogID)
 	if err != nil {
 		fmt.Printf(`Error while deleting "clientRequestLog": %v`, types.Error{

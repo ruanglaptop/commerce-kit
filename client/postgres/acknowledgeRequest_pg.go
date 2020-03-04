@@ -3,12 +3,10 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/payfazz/commerce-kit/appcontext"
 	"github.com/payfazz/commerce-kit/client"
 	"github.com/payfazz/commerce-kit/data"
-	"github.com/payfazz/commerce-kit/logperform"
 	"github.com/payfazz/commerce-kit/types"
 )
 
@@ -19,19 +17,6 @@ type AcknowledgeRequestPostgresStorage struct {
 
 // FindAll get list of acknowledge requests
 func (s *AcknowledgeRequestPostgresStorage) FindAll(ctx *context.Context, params *client.FindAllAcknowledgeRequests) ([]*client.AcknowledgeRequest, *types.Error) {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "FindAll"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	acknowledgeRequest := []*client.AcknowledgeRequest{}
 	currentAccount := appcontext.CurrentAccount(ctx)
 	var err error
@@ -66,19 +51,6 @@ func (s *AcknowledgeRequestPostgresStorage) FindAll(ctx *context.Context, params
 
 // FindByID get acknowledge request by its id
 func (s *AcknowledgeRequestPostgresStorage) FindByID(ctx *context.Context, acknowledgeRequestID int) (*client.AcknowledgeRequest, *types.Error) {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "FindByID"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	var acknowledgeRequest client.AcknowledgeRequest
 	err := s.repository.FindByID(ctx, &acknowledgeRequest, acknowledgeRequestID)
 	if err != nil {
@@ -94,19 +66,6 @@ func (s *AcknowledgeRequestPostgresStorage) FindByID(ctx *context.Context, ackno
 
 // Insert create a new acknowledge request
 func (s *AcknowledgeRequestPostgresStorage) Insert(ctx *context.Context, acknowledgeRequest *client.AcknowledgeRequest) (*client.AcknowledgeRequest, *types.Error) {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "Insert"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	err := s.repository.Insert(ctx, acknowledgeRequest)
 	if err != nil {
 		return nil, &types.Error{
@@ -122,19 +81,6 @@ func (s *AcknowledgeRequestPostgresStorage) Insert(ctx *context.Context, acknowl
 
 // Update update an acknowledge request
 func (s *AcknowledgeRequestPostgresStorage) Update(ctx *context.Context, acknowledgeRequest *client.AcknowledgeRequest) (*client.AcknowledgeRequest, *types.Error) {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "Update"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	err := s.repository.Update(ctx, acknowledgeRequest)
 	if err != nil {
 		return nil, &types.Error{
@@ -150,19 +96,6 @@ func (s *AcknowledgeRequestPostgresStorage) Update(ctx *context.Context, acknowl
 
 // Delete delete an acknowledge request
 func (s *AcknowledgeRequestPostgresStorage) Delete(ctx *context.Context, acknowledgeRequestID int) *types.Error {
-	// log start here
-	logString := appcontext.LogString(ctx)
-	var logMethod = "Delete"
-	var logData = &logperform.LoggerStruct{
-		Content:          fmt.Sprintf(contentData, typeData, clientDomain, logMethod),
-		CurrentStringLog: logString,
-	}
-	defer func(t time.Time) {
-		since := time.Since(t)
-		logData.CalledTime = &since
-		logperform.PerformanceLogger(logData)
-	}(time.Now().UTC())
-
 	err := s.repository.Delete(ctx, acknowledgeRequestID)
 	if err != nil {
 		return &types.Error{
