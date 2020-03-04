@@ -1201,6 +1201,9 @@ func (r *PostgresStorage) SelectFirstWithQuery(ctx *context.Context, elems inter
 
 	err = db.Get(elems, query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrNotFound
+		}
 		return err
 	}
 
