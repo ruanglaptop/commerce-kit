@@ -253,6 +253,9 @@ func (r *PostgresStorage) SelectWithQuery(ctx *context.Context, elems interface{
 
 	err = db.Select(elems, query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrNotFound
+		}
 		return err
 	}
 
