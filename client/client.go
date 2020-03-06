@@ -419,6 +419,8 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			return errDo
 		}
 
+		isSuccessCollectingCache := true
+
 		// collect cache
 		clientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
 			URL:      urlPath.String(),
@@ -432,9 +434,23 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 				Method:   string(method),
 				IsActive: false,
 			})
+			isSuccessCollectingCache = false
 		}
 
-		response = string(fmt.Sprintf("%v", clientCache.Response))
+		bytes, errJSON := json.Marshal(clientCache.Response)
+		if errJSON != nil {
+			fmt.Printf("\nFailed to json.Marshal to convert cached response while doing collecting caching data: %v", errJSON)
+			isSuccessCollectingCache = false
+		}
+
+		if isSuccessCollectingCache {
+			fmt.Printf("\n\n============================================================\n")
+			fmt.Printf("\nFailed to call client: %#v\n", errDo)
+			fmt.Printf("\n\tSuccess collecting last cached and omitting error client\n")
+			fmt.Printf("\n============================================================\n\n")
+			errDo = nil
+		}
+		response = string(bytes)
 	}
 
 	if isAllowed && !isError {
