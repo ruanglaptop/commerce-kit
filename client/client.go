@@ -76,9 +76,9 @@ var httpClient = &http.Client{Timeout: defaultHTTPTimeout}
 
 // GenericHTTPClient represents an interface to generalize an object to implement HTTPClient
 type GenericHTTPClient interface {
-	GetBaseURL() string
 	Do(req *http.Request) (string, *ResponseError)
 	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithCaching(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithoutLog(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCustomizedError(ctx *context.Context, path string, method Method, queryParams interface{}, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
@@ -89,17 +89,13 @@ type GenericHTTPClient interface {
 type HTTPClient struct {
 	clientRequestLogStorage   ClientRequestLogStorage
 	acknowledgeRequestService AcknowledgeRequestServiceInterface
+	clientCacheService        ClientCacheServiceInterface
 	APIURL                    string
 	HTTPClient                *http.Client
 	MaxNetworkRetries         int
 	UseNormalSleep            bool
 	AuthorizationTypes        []AuthorizationType
 	ClientName                string
-}
-
-// GetBaseURL collect base url of specific client
-func (c *HTTPClient) GetBaseURL() string {
-	return c.APIURL
 }
 
 func (c *HTTPClient) shouldRetry(err error, res *http.Response, retry int) bool {
@@ -277,6 +273,233 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
 		return errDo
+	}
+
+	type TransactionID struct {
+		ID int `json:"id"`
+	}
+	var transactionID TransactionID
+	json.Unmarshal([]byte(response), &transactionID)
+
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+		if errDo != nil {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		}
+		clientRequestLog.Status = "success"
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+
+		requestStatus := appcontext.RequestStatus(ctx)
+		if requestStatus == nil && isAcknowledgeNeeded {
+			currentClientRequests := []*ClientRequest{}
+			temp := appcontext.ClientRequests(ctx)
+			if temp != nil {
+				currentClientRequests = temp.([]*ClientRequest)
+			}
+			currentClientRequests = append(currentClientRequests, &ClientRequest{
+				Client:  c,
+				Request: clientRequestLog,
+			})
+			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
+			// ignore when error occurs
+			_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
+				RequestID:          clientRequestLog.ID,
+				CommitStatus:       "on_progress",
+				ReservedHolder:     requestRaw,
+				ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
+				Message:            "",
+			})
+		}
+	}
+
+	if response != "" && result != nil {
+		err = json.Unmarshal([]byte(response), result)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	return errDo
+}
+
+// CallClientWithCaching do call client if client is unavailable try to collect response from cache when the time is still fulfill
+func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+	var jsonData []byte
+	var err error
+	var response string
+	var errDo *ResponseError
+
+	if request != nil && request != "" {
+		jsonData, err = json.Marshal(request)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	req, err := http.NewRequest(string(method), urlPath.String(), bytes.NewBuffer(jsonData))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	clientID, clientType := determineClient(ctx)
+	requestRaw := types.Metadata{}
+	if request != nil && request != "" {
+		err = json.Unmarshal(jsonData, &requestRaw)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	var clientRequestLog *ClientRequestLog
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
+	requestReferenceID := appcontext.RequestReferenceID(ctx)
+	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
+	if method != GET {
+		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+			ClientID:       clientID,
+			ClientType:     clientType,
+			Method:         string(method),
+			URL:            urlPath.String(),
+			Header:         fmt.Sprintf("%v", req.Header),
+			Request:        requestRaw,
+			Status:         "calling",
+			HTTPStatusCode: 0,
+			ReferenceID:    requestReferenceID,
+		})
+	}
+
+	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
+	if errClientCache != nil {
+		fmt.Printf("\nFailed to IsClientNeedToBeCache while collecting caching information: %v", errClientCache)
+	}
+
+	isError := false
+	response, errDo = c.Do(req)
+	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		if method != GET {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+			clientRequestLog.Status = "failed"
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		}
+
+		// Do check cache
+		isError = true
+		if !isAllowed {
+			return errDo
+		}
+
+		// collect cache
+		clientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
+			URL:      urlPath.String(),
+			Method:   string(method),
+			IsActive: true,
+		})
+		if errClientCache != nil {
+			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", errClientCache)
+			fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
+				URL:      urlPath.String(),
+				Method:   string(method),
+				IsActive: false,
+			})
+		}
+
+		response = string(fmt.Sprintf("%v", clientCache.Response))
+	}
+
+	if isAllowed && !isError {
+		// do caching
+		isExist := true
+		currentClientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
+			URL:      urlPath.String(),
+			Method:   string(method),
+			IsActive: false,
+		})
+		if errClientCache != nil {
+			if errClientCache.Message != "data is not found" {
+				fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching in order to update cache: %v", errClientCache)
+				fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
+					URL:      urlPath.String(),
+					Method:   string(method),
+					IsActive: false,
+				})
+			}
+			isExist = false
+		}
+
+		var responseInMap types.Metadata
+		errJSON := json.Unmarshal([]byte(response), &responseInMap)
+		if errJSON != nil {
+			fmt.Printf("\nFailed to json.Unmarshal to convert response while doing caching: %v", errJSON)
+		}
+
+		if isExist {
+			// update cache
+			currentClientCache.Response = types.Metadata{}
+			currentClientCache.Response = responseInMap
+			currentClientCache.LastAccessed = time.Now().UTC()
+
+			_, errClientCache = c.clientCacheService.UpdateClientCache(ctx, currentClientCache.ID, &UpdateClientCacheParams{
+				URL:          currentClientCache.URL,
+				Method:       currentClientCache.Method,
+				ClientID:     currentClientCache.ClientID,
+				ClientName:   currentClientCache.ClientName,
+				Response:     currentClientCache.Response,
+				LastAccessed: currentClientCache.LastAccessed,
+			})
+			if errClientCache != nil {
+				fmt.Printf("\nFailed to UpdateClientCache while doing caching: %v", errClientCache)
+			}
+		} else {
+			// create new cache
+			tempClientID := appcontext.ClientID(ctx)
+			clientID := 0
+			if tempClientID != nil {
+				clientID = *tempClientID
+			}
+
+			_, errClientCache = c.clientCacheService.CreateClientCache(ctx, &CreateClientCacheParams{
+				URL:          urlPath.String(),
+				Method:       string(method),
+				ClientID:     clientID,
+				ClientName:   c.ClientName,
+				Response:     responseInMap,
+				LastAccessed: time.Now().UTC(),
+			})
+			if errClientCache != nil {
+				fmt.Printf("\nFailed to CreateClientCache while doing caching: %v", errClientCache)
+			}
+		}
 	}
 
 	type TransactionID struct {
@@ -742,6 +965,7 @@ func NewHTTPClient(
 	config HTTPClient,
 	clientRequestLogStorage ClientRequestLogStorage,
 	acknowledgeRequestService AcknowledgeRequestServiceInterface,
+	clientCacheService ClientCacheServiceInterface,
 ) *HTTPClient {
 	if config.HTTPClient == nil {
 		config.HTTPClient = httpClient
@@ -759,6 +983,7 @@ func NewHTTPClient(
 		AuthorizationTypes:        config.AuthorizationTypes,
 		clientRequestLogStorage:   clientRequestLogStorage,
 		acknowledgeRequestService: acknowledgeRequestService,
+		clientCacheService:        clientCacheService,
 		ClientName:                config.ClientName,
 	}
 }
