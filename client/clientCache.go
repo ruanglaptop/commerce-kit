@@ -93,7 +93,7 @@ type ClientCacheService struct {
 func (s *ClientCacheService) IsClientNeedToBeCache(ctx *context.Context, url string, method string) (bool, *types.Error) {
 	urlToCache, err := s.urlToCache.GetURLToCacheByURL(ctx, url, method)
 	if err != nil {
-		if err.Error.Error() != "data is not found" {
+		if err.Message != "data is not found" {
 			err.Path = ".ClientCacheService->IsClientNeedToBeCache()" + err.Path
 			return false, err
 		}

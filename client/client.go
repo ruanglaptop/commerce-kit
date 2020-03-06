@@ -265,12 +265,6 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		})
 	}
 
-	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
-	if errClientCache != nil || errClientCache.Error != nil {
-		fmt.Printf("\nFailed to IsClientNeedToBeCache while collecting caching information: %v", errClientCache)
-	}
-
-	isError := false
 	response, errDo = c.Do(req)
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
 		if method != GET {
@@ -278,99 +272,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			clientRequestLog.Status = "failed"
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
-
-		// Do check cache
-		isError = true
-		if !isAllowed {
-			return errDo
-		}
-
-		// collect cache
-		clientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
-			URL:      urlPath.String(),
-			Method:   string(method),
-			IsActive: true,
-		})
-		if errClientCache != nil || errClientCache.Error != nil {
-			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", errClientCache)
-			fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
-				URL:      urlPath.String(),
-				Method:   string(method),
-				IsActive: false,
-			})
-		}
-
-		response = string(fmt.Sprintf("%v", clientCache.Response))
-	}
-
-	if isAllowed && !isError {
-		// do caching
-		isExist := true
-		currentClientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
-			URL:      urlPath.String(),
-			Method:   string(method),
-			IsActive: false,
-		})
-		if errClientCache != nil || errClientCache.Error != nil {
-			if errClientCache.Error.Error() != "data is not found" {
-				fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching in order to update cache: %v", errClientCache)
-				fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
-					URL:      urlPath.String(),
-					Method:   string(method),
-					IsActive: false,
-				})
-			}
-			isExist = false
-		}
-
-		var responseInMap types.Metadata
-		bytesBuffer, errJSON := json.Marshal(response)
-		if errJSON != nil {
-			fmt.Printf("\nFailed to json.Marshal to convert response while doing caching: %v", errJSON)
-		}
-
-		errJSON = json.Unmarshal(bytesBuffer, &responseInMap)
-		if errJSON != nil {
-			fmt.Printf("\nFailed to json.Unmarshal to convert response while doing caching: %v", errJSON)
-		}
-
-		if isExist {
-			// update cache
-			currentClientCache.Response = types.Metadata{}
-			currentClientCache.Response = responseInMap
-			currentClientCache.LastAccessed = time.Now().UTC()
-
-			_, errClientCache = c.clientCacheService.UpdateClientCache(ctx, currentClientCache.ID, &UpdateClientCacheParams{
-				URL:          currentClientCache.URL,
-				Method:       currentClientCache.Method,
-				ClientID:     currentClientCache.ClientID,
-				ClientName:   currentClientCache.ClientName,
-				Response:     currentClientCache.Response,
-				LastAccessed: currentClientCache.LastAccessed,
-			})
-			if errClientCache != nil || errClientCache.Error != nil {
-				fmt.Printf("\nFailed to UpdateClientCache while doing caching: %v", errClientCache)
-			}
-		} else {
-			// create new cache
-			tempClientID := appcontext.ClientID(ctx)
-			clientID := 0
-			if tempClientID != nil {
-				clientID = *tempClientID
-			}
-
-			_, errClientCache = c.clientCacheService.CreateClientCache(ctx, &CreateClientCacheParams{
-				URL:          urlPath.String(),
-				Method:       string(method),
-				ClientID:     clientID,
-				ClientName:   c.ClientName,
-				Response:     responseInMap,
-				LastAccessed: time.Now().UTC(),
-			})
-			if errClientCache != nil || errClientCache.Error != nil {
-				fmt.Printf("\nFailed to CreateClientCache while doing caching: %v", errClientCache)
-			}
-		}
+		return errDo
 	}
 
 	type TransactionID struct {
@@ -497,6 +399,12 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		})
 	}
 
+	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
+	if errClientCache != nil {
+		fmt.Printf("\nFailed to IsClientNeedToBeCache while collecting caching information: %v", errClientCache)
+	}
+
+	isError := false
 	response, errDo = c.Do(req)
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
 		if method != GET {
@@ -504,7 +412,94 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			clientRequestLog.Status = "failed"
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
-		return errDo
+
+		// Do check cache
+		isError = true
+		if !isAllowed {
+			return errDo
+		}
+
+		// collect cache
+		clientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
+			URL:      urlPath.String(),
+			Method:   string(method),
+			IsActive: true,
+		})
+		if errClientCache != nil {
+			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", errClientCache)
+			fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
+				URL:      urlPath.String(),
+				Method:   string(method),
+				IsActive: false,
+			})
+		}
+
+		response = string(fmt.Sprintf("%v", clientCache.Response))
+	}
+
+	if isAllowed && !isError {
+		// do caching
+		isExist := true
+		currentClientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
+			URL:      urlPath.String(),
+			Method:   string(method),
+			IsActive: false,
+		})
+		if errClientCache != nil {
+			if errClientCache.Message != "data is not found" {
+				fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching in order to update cache: %v", errClientCache)
+				fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
+					URL:      urlPath.String(),
+					Method:   string(method),
+					IsActive: false,
+				})
+			}
+			isExist = false
+		}
+
+		var responseInMap types.Metadata
+		errJSON := json.Unmarshal([]byte(response), &responseInMap)
+		if errJSON != nil {
+			fmt.Printf("\nFailed to json.Unmarshal to convert response while doing caching: %v", errJSON)
+		}
+
+		if isExist {
+			// update cache
+			currentClientCache.Response = types.Metadata{}
+			currentClientCache.Response = responseInMap
+			currentClientCache.LastAccessed = time.Now().UTC()
+
+			_, errClientCache = c.clientCacheService.UpdateClientCache(ctx, currentClientCache.ID, &UpdateClientCacheParams{
+				URL:          currentClientCache.URL,
+				Method:       currentClientCache.Method,
+				ClientID:     currentClientCache.ClientID,
+				ClientName:   currentClientCache.ClientName,
+				Response:     currentClientCache.Response,
+				LastAccessed: currentClientCache.LastAccessed,
+			})
+			if errClientCache != nil {
+				fmt.Printf("\nFailed to UpdateClientCache while doing caching: %v", errClientCache)
+			}
+		} else {
+			// create new cache
+			tempClientID := appcontext.ClientID(ctx)
+			clientID := 0
+			if tempClientID != nil {
+				clientID = *tempClientID
+			}
+
+			_, errClientCache = c.clientCacheService.CreateClientCache(ctx, &CreateClientCacheParams{
+				URL:          urlPath.String(),
+				Method:       string(method),
+				ClientID:     clientID,
+				ClientName:   c.ClientName,
+				Response:     responseInMap,
+				LastAccessed: time.Now().UTC(),
+			})
+			if errClientCache != nil {
+				fmt.Printf("\nFailed to CreateClientCache while doing caching: %v", errClientCache)
+			}
+		}
 	}
 
 	type TransactionID struct {
