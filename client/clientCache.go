@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/payfazz/commerce-kit/data"
 	"github.com/payfazz/commerce-kit/types"
 	validator "gopkg.in/go-playground/validator.v9"
 )
@@ -94,7 +93,7 @@ type ClientCacheService struct {
 func (s *ClientCacheService) IsClientNeedToBeCache(ctx *context.Context, url string, method string) (bool, *types.Error) {
 	urlToCache, err := s.urlToCache.GetURLToCacheByURL(ctx, url, method)
 	if err != nil {
-		if err.Error != data.ErrNotFound {
+		if err.Error.Error() != "data is not found" {
 			err.Path = ".ClientCacheService->IsClientNeedToBeCache()" + err.Path
 			return false, err
 		}

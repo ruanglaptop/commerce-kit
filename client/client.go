@@ -15,7 +15,6 @@ import (
 
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/payfazz/commerce-kit/appcontext"
-	"github.com/payfazz/commerce-kit/data"
 	"github.com/payfazz/commerce-kit/types"
 )
 
@@ -266,9 +265,9 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		})
 	}
 
-	isAllowed, err := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
-	if err != nil {
-		fmt.Printf("\nFailed to IsClientNeedToBeCache while collecting caching information: %v", err)
+	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
+	if errClientCache != nil || errClientCache.Error != nil {
+		fmt.Printf("\nFailed to IsClientNeedToBeCache while collecting caching information: %v", errClientCache)
 	}
 
 	isError := false
@@ -287,13 +286,13 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		}
 
 		// collect cache
-		clientCache, err := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
+		clientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
 			URL:      urlPath.String(),
 			Method:   string(method),
 			IsActive: true,
 		})
-		if err != nil {
-			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", err)
+		if errClientCache != nil || errClientCache.Error != nil {
+			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", errClientCache)
 			fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
 				URL:      urlPath.String(),
 				Method:   string(method),
@@ -307,14 +306,14 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	if isAllowed && !isError {
 		// do caching
 		isExist := true
-		currentClientCache, err := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
+		currentClientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
 			URL:      urlPath.String(),
 			Method:   string(method),
 			IsActive: false,
 		})
-		if err != nil {
-			if err.Error != data.ErrNotFound {
-				fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching in order to update cache: %v", err)
+		if errClientCache != nil || errClientCache.Error != nil {
+			if errClientCache.Error.Error() != "data is not found" {
+				fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching in order to update cache: %v", errClientCache)
 				fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
 					URL:      urlPath.String(),
 					Method:   string(method),
@@ -341,7 +340,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			currentClientCache.Response = responseInMap
 			currentClientCache.LastAccessed = time.Now().UTC()
 
-			_, err = c.clientCacheService.UpdateClientCache(ctx, currentClientCache.ID, &UpdateClientCacheParams{
+			_, errClientCache = c.clientCacheService.UpdateClientCache(ctx, currentClientCache.ID, &UpdateClientCacheParams{
 				URL:          currentClientCache.URL,
 				Method:       currentClientCache.Method,
 				ClientID:     currentClientCache.ClientID,
@@ -349,8 +348,8 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 				Response:     currentClientCache.Response,
 				LastAccessed: currentClientCache.LastAccessed,
 			})
-			if err != nil {
-				fmt.Printf("\nFailed to UpdateClientCache while doing caching: %v", err)
+			if errClientCache != nil || errClientCache.Error != nil {
+				fmt.Printf("\nFailed to UpdateClientCache while doing caching: %v", errClientCache)
 			}
 		} else {
 			// create new cache
@@ -359,7 +358,8 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			if tempClientID != nil {
 				clientID = *tempClientID
 			}
-			_, err = c.clientCacheService.CreateClientCache(ctx, &CreateClientCacheParams{
+
+			_, errClientCache = c.clientCacheService.CreateClientCache(ctx, &CreateClientCacheParams{
 				URL:          urlPath.String(),
 				Method:       string(method),
 				ClientID:     clientID,
@@ -367,8 +367,8 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 				Response:     responseInMap,
 				LastAccessed: time.Now().UTC(),
 			})
-			if err != nil {
-				fmt.Printf("\nFailed to CreateClientCache while doing caching: %v", err)
+			if errClientCache != nil || errClientCache.Error != nil {
+				fmt.Printf("\nFailed to CreateClientCache while doing caching: %v", errClientCache)
 			}
 		}
 	}
