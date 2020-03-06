@@ -429,7 +429,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		})
 		if errClientCache != nil {
 			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", errClientCache)
-			fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
+			fmt.Printf("\n\tParams: %#v", GetClientCacheByURLParams{
 				URL:      urlPath.String(),
 				Method:   string(method),
 				IsActive: false,
@@ -437,10 +437,14 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			isSuccessCollectingCache = false
 		}
 
-		bytes, errJSON := json.Marshal(clientCache.Response)
-		if errJSON != nil {
-			fmt.Printf("\nFailed to json.Marshal to convert cached response while doing collecting caching data: %v", errJSON)
-			isSuccessCollectingCache = false
+		var bytes []byte
+		var errJSON error
+		if isSuccessCollectingCache {
+			bytes, errJSON = json.Marshal(clientCache.Response)
+			if errJSON != nil {
+				fmt.Printf("\nFailed to json.Marshal to convert cached response while doing collecting caching data: %v", errJSON)
+				isSuccessCollectingCache = false
+			}
 		}
 
 		if isSuccessCollectingCache {
@@ -464,7 +468,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		if errClientCache != nil {
 			if errClientCache.Message != "data is not found" {
 				fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching in order to update cache: %v", errClientCache)
-				fmt.Printf("\n\tParams: %v", GetClientCacheByURLParams{
+				fmt.Printf("\n\tParams: %#v", GetClientCacheByURLParams{
 					URL:      urlPath.String(),
 					Method:   string(method),
 					IsActive: false,
