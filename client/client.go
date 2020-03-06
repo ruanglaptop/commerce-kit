@@ -477,10 +477,12 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			isExist = false
 		}
 
-		var responseInMap types.Metadata
-		errJSON := json.Unmarshal([]byte(response), &responseInMap)
-		if errJSON != nil {
-			fmt.Printf("\nFailed to json.Unmarshal to convert response while doing caching: %v", errJSON)
+		responseInMap := types.Metadata{}
+		if response != "" {
+			errJSON := json.Unmarshal([]byte(response), &responseInMap)
+			if errJSON != nil {
+				fmt.Printf("\nFailed to json.Unmarshal to convert response while doing caching: %v", errJSON)
+			}
 		}
 
 		if isExist {
