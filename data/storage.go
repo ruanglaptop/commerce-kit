@@ -31,7 +31,7 @@ type GenericStorage interface {
 	WherePOSTEMP(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error
 	SelectWithQuery(ctx *context.Context, elem interface{}, query string, args map[string]interface{}) error
 	FindByID(ctx *context.Context, elem interface{}, id interface{}) error
-	FindAll(ctx *context.Context, elems interface{}, page int, limit int) error
+	FindAll(ctx *context.Context, elems interface{}, page int, limit int, isAsc bool) error
 	Insert(ctx *context.Context, elem interface{}) error
 	InsertMany(ctx *context.Context, elem interface{}) error
 	InsertManyWithTime(ctx *context.Context, elem interface{}, createdAt time.Time) error
@@ -52,7 +52,7 @@ type ImmutableGenericStorage interface {
 	Single(ctx *context.Context, elem interface{}, where string, arg map[string]interface{}) error
 	Where(ctx *context.Context, elems interface{}, where string, arg map[string]interface{}) error
 	FindByID(ctx *context.Context, elem interface{}, id interface{}) error
-	FindAll(ctx *context.Context, elems interface{}, page int, limit int) error
+	FindAll(ctx *context.Context, elems interface{}, page int, limit int, isAsc bool) error
 	Insert(ctx *context.Context, elem interface{}) error
 	DeleteMany(ctx *context.Context, ids interface{}) error
 }
@@ -278,9 +278,15 @@ func (r *PostgresStorage) FindByID(ctx *context.Context, elem interface{}, id in
 }
 
 // FindAll finds all elements from the database.
-func (r *PostgresStorage) FindAll(ctx *context.Context, elems interface{}, page int, limit int) error {
+func (r *PostgresStorage) FindAll(ctx *context.Context, elems interface{}, page int, limit int, isAsc bool) error {
 	where := `true`
-	where = fmt.Sprintf(`%s ORDER BY "id" DESC LIMIT :limit OFFSET :offset`, where)
+	where = fmt.Sprintf(`%s ORDER BY "id"`, where)
+
+	if !isAsc {
+		where = fmt.Sprintf(`%s %s`, where, "DESC")
+	}
+
+	where = fmt.Sprintf(`%s LIMIT :limit OFFSET :offset`, where)
 
 	err := r.Where(ctx, elems, where, map[string]interface{}{
 		"limit":  limit,
