@@ -203,12 +203,28 @@ func getUpdatedFields(structField reflect.StructField, currentObject reflect.Val
 }
 
 func (s *ValidatorAccess) validatePut(warehouseIDMap map[int]*int, params *ValidateAccessParams, accessesMap map[string]map[string]map[string]map[string]*Access) error {
+	currentObject := reflect.ValueOf(params.CurrentObject).Elem()
+	updatedObject := reflect.ValueOf(params.UpdatedObject).Elem()
+	for i := 0; i < currentObject.NumField(); i++ {
+		if currentObject.Type().Field(i).Name == "WarehouseID" || currentObject.Type().Field(i).Name == "WarehouseSourceID" {
+			id := updatedObject.Field(i).Int()
+			if warehouseIDMap[int(id)] == nil {
+				return ErrUnauthorized
+			}
+		}
+		if currentObject.Type().Field(i).Name == "WarehouseIDs" {
+			len := updatedObject.Field(i).Len()
+			for j := 0; j < len; j++ {
+				currentElement := updatedObject.Field(i).Index(j)
+				if warehouseIDMap[int(currentElement.Int())] == nil {
+					return ErrUnauthorized
+				}
+			}
+		}
+	}
 	if accessesMap[*params.MethodName][*params.Path]["all"] != nil {
 		return nil
 	}
-
-	currentObject := reflect.ValueOf(params.CurrentObject).Elem()
-	updatedObject := reflect.ValueOf(params.UpdatedObject).Elem()
 
 	updatedFields := map[string]string{}
 	for i := 0; i < currentObject.NumField(); i++ {
@@ -283,6 +299,27 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 	}
 	user = *userData.User
 
+	warehouseIDMap := map[int]*int{}
+	for _, id := range user.WarehouseIDs {
+		warehouseIDMap[*id] = id
+	}
+
+	if params.Path == nil {
+		if params.WarehouseIDs != nil {
+			length := len(*params.WarehouseIDs)
+			for i := 0; i < length; i++ {
+				if (*params.WarehouseIDs)[i] == 0 {
+					for _, id := range warehouseIDMap {
+						*params.WarehouseIDs = append(*params.WarehouseIDs, *id)
+					}
+				} else if warehouseIDMap[(*params.WarehouseIDs)[i]] == nil {
+					(*params.WarehouseIDs)[i] = -1
+				}
+			}
+		}
+		return nil
+	}
+
 	accessesMap := map[string]map[string]map[string]map[string]*Access{}
 
 	for _, role := range user.Roles {
@@ -311,20 +348,14 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 		}
 	}
 
-	warehouseIDMap := map[int]*int{}
-	for _, id := range user.WarehouseIDs {
-		warehouseIDMap[*id] = id
-	}
-
 	if accessesMap[*params.MethodName][*params.Path] == nil {
 		return ErrUnauthorized
 	}
 
-	if params.CurrentObject == nil {
-		return nil
-	}
-
 	if *params.MethodName == "PUT" {
+		if params.CurrentObject == nil {
+			return nil
+		}
 		return s.validatePut(warehouseIDMap, params, accessesMap)
 	} else if *params.MethodName == "GET" {
 		if params.WarehouseIDs != nil {
@@ -360,6 +391,14 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 			}
 		}
 	} else if *params.MethodName == "POST" || *params.MethodName == "DELETE" {
+		if params.WarehouseIDs != nil {
+			length := len(*params.WarehouseIDs)
+			for i := 0; i < length; i++ {
+				if warehouseIDMap[(*params.WarehouseIDs)[i]] == nil {
+					return ErrUnauthorized
+				}
+			}
+		}
 		if params.CurrentObject != nil {
 			currentObject := reflect.ValueOf(params.CurrentObject)
 			if currentObject.Kind() == reflect.Ptr {
