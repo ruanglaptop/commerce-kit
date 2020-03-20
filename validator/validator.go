@@ -216,7 +216,6 @@ func (s *ValidatorAccess) validatePut(warehouseIDMap map[int]*int, params *Valid
 			len := updatedObject.Field(i).Len()
 			for j := 0; j < len; j++ {
 				currentElement := updatedObject.Field(i).Index(j)
-				fmt.Println(currentElement)
 				if warehouseIDMap[int(currentElement.Int())] == nil {
 					return ErrUnauthorized
 				}
