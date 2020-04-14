@@ -80,6 +80,9 @@ const (
 
 	// KeyCurrentClient represents the Current Client in http server context
 	KeyCurrentClient contextKey = "CurrentClient"
+
+	// KeyWarehouseType represents the value of warehouse type
+	KeyWarehouseType contextKey = "KeyWarehouseType"
 )
 
 // Owner gets the data owner from the context
@@ -117,6 +120,16 @@ func SessionID(ctx *context.Context) *string {
 	sessionID := (*ctx).Value(KeySessionID)
 	if sessionID != nil {
 		v := sessionID.(string)
+		return &v
+	}
+	return nil
+}
+
+// WarehouseType gets the warehouse type data from the context
+func WarehouseType(ctx *context.Context) *string {
+	warehouseType := (*ctx).Value(KeyWarehouseType)
+	if warehouseType != nil {
+		v := warehouseType.(string)
 		return &v
 	}
 	return nil
