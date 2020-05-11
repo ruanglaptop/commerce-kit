@@ -1,10 +1,14 @@
 package uploader
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"net/http"
 	"strings"
 	"time"
 
@@ -13,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/nfnt/resize"
 
 	"github.com/payfazz/commerce-kit/appcontext"
 	"github.com/payfazz/commerce-kit/logperform"
@@ -144,6 +149,51 @@ func (s *Service) doUpload(ctx *context.Context, fileBytes []byte, url string) *
 	return nil
 }
 
+func resizeImage(imgBytes []byte) ([]byte, *types.Error) {
+	imageInfo, _, errDecodeConfig := image.DecodeConfig(bytes.NewReader(imgBytes))
+	if errDecodeConfig != nil {
+		return nil, &types.Error{
+			Path:    ".UploadController->resizeImage()",
+			Message: errDecodeConfig.Error(),
+			Error:   errDecodeConfig,
+			Type:    "golang-error",
+		}
+	}
+
+	img, errDecode := jpeg.Decode(bytes.NewReader(imgBytes))
+	if errDecode != nil {
+		return nil, &types.Error{
+			Path:    ".UploadController->resizeImage()",
+			Message: errDecode.Error(),
+			Error:   errDecode,
+			Type:    "golang-error",
+		}
+	}
+	var imgConverted image.Image
+	if imageInfo.Width < 1000 {
+		imgConverted = resize.Resize(uint((imageInfo.Width * 80 / 100)), 0, img, resize.Lanczos3)
+	} else {
+		imgConverted = resize.Resize(1000, 0, img, resize.Lanczos3)
+	}
+
+	imgBuffer := new(bytes.Buffer)
+	errEncode := jpeg.Encode(imgBuffer, imgConverted, nil)
+	if errEncode != nil {
+		return nil, &types.Error{
+			Path:    ".UploadController->resizeImage()",
+			Message: errEncode.Error(),
+			Error:   errEncode,
+			Type:    "golang-error",
+		}
+	}
+
+	if bytes.NewReader(imgBuffer.Bytes()).Size() > 1000000 { //1MB
+		resizeImage(imgBuffer.Bytes())
+	}
+
+	return imgBuffer.Bytes(), nil
+}
+
 // Upload upload file
 func (s *Service) Upload(ctx *context.Context, fileBytes []byte, fileName string) (*File, *types.Error) {
 	// log start here
@@ -170,7 +220,16 @@ func (s *Service) Upload(ctx *context.Context, fileBytes []byte, fileName string
 			Type:    "golang-error",
 		}
 	}
-
+	var errResize *types.Error
+	if http.DetectContentType(fileBytes) != "image/jpeg" || http.DetectContentType(fileBytes) != "image/png" {
+		if bytes.NewReader(fileBytes).Size() > 1000000 {
+			fileBytes, errResize = resizeImage(fileBytes)
+			if errResize != nil {
+				errResize.Path = ".UploaderService->Upload()" + errResize.Path
+				return nil, errResize
+			}
+		}
+	}
 	errUpload := s.doUpload(ctx, fileBytes, url)
 	if errUpload != nil {
 		errUpload.Path = ".UploaderService->Upload()" + errUpload.Path
@@ -180,6 +239,51 @@ func (s *Service) Upload(ctx *context.Context, fileBytes []byte, fileName string
 	return &File{
 		URL: fmt.Sprintf("%s/%s/%s", s.url, s.bucketName, url[2:len(url)]),
 	}, nil
+}
+
+func resizeImage(imgBytes []byte) ([]byte, *types.Error) {
+	imageInfo, _, errDecodeConfig := image.DecodeConfig(bytes.NewReader(imgBytes))
+	if errDecodeConfig != nil {
+		return nil, &types.Error{
+			Path:    ".UploadController->resizeImage()",
+			Message: errDecodeConfig.Error(),
+			Error:   errDecodeConfig,
+			Type:    "golang-error",
+		}
+	}
+
+	img, errDecode := jpeg.Decode(bytes.NewReader(imgBytes))
+	if errDecode != nil {
+		return nil, &types.Error{
+			Path:    ".UploadController->resizeImage()",
+			Message: errDecode.Error(),
+			Error:   errDecode,
+			Type:    "golang-error",
+		}
+	}
+	var imgConverted image.Image
+	if imageInfo.Width < 1000 {
+		imgConverted = resize.Resize(uint((imageInfo.Width * 80 / 100)), 0, img, resize.Lanczos3)
+	} else {
+		imgConverted = resize.Resize(1000, 0, img, resize.Lanczos3)
+	}
+
+	imgBuffer := new(bytes.Buffer)
+	errEncode := jpeg.Encode(imgBuffer, imgConverted, nil)
+	if errEncode != nil {
+		return nil, &types.Error{
+			Path:    ".UploadController->resizeImage()",
+			Message: errEncode.Error(),
+			Error:   errEncode,
+			Type:    "golang-error",
+		}
+	}
+
+	if bytes.NewReader(imgBuffer.Bytes()).Size() > 1000000 { //1MB
+		resizeImage(imgBuffer.Bytes())
+	}
+
+	return imgBuffer.Bytes(), nil
 }
 
 // NewService creates new uploader service
