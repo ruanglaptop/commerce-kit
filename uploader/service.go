@@ -241,51 +241,6 @@ func (s *Service) Upload(ctx *context.Context, fileBytes []byte, fileName string
 	}, nil
 }
 
-func resizeImage(imgBytes []byte) ([]byte, *types.Error) {
-	imageInfo, _, errDecodeConfig := image.DecodeConfig(bytes.NewReader(imgBytes))
-	if errDecodeConfig != nil {
-		return nil, &types.Error{
-			Path:    ".UploadController->resizeImage()",
-			Message: errDecodeConfig.Error(),
-			Error:   errDecodeConfig,
-			Type:    "golang-error",
-		}
-	}
-
-	img, errDecode := jpeg.Decode(bytes.NewReader(imgBytes))
-	if errDecode != nil {
-		return nil, &types.Error{
-			Path:    ".UploadController->resizeImage()",
-			Message: errDecode.Error(),
-			Error:   errDecode,
-			Type:    "golang-error",
-		}
-	}
-	var imgConverted image.Image
-	if imageInfo.Width < 1000 {
-		imgConverted = resize.Resize(uint((imageInfo.Width * 80 / 100)), 0, img, resize.Lanczos3)
-	} else {
-		imgConverted = resize.Resize(1000, 0, img, resize.Lanczos3)
-	}
-
-	imgBuffer := new(bytes.Buffer)
-	errEncode := jpeg.Encode(imgBuffer, imgConverted, nil)
-	if errEncode != nil {
-		return nil, &types.Error{
-			Path:    ".UploadController->resizeImage()",
-			Message: errEncode.Error(),
-			Error:   errEncode,
-			Type:    "golang-error",
-		}
-	}
-
-	if bytes.NewReader(imgBuffer.Bytes()).Size() > 1000000 { //1MB
-		resizeImage(imgBuffer.Bytes())
-	}
-
-	return imgBuffer.Bytes(), nil
-}
-
 // NewService creates new uploader service
 func NewService(bucket *blob.Bucket, bucketName string, url string) *Service {
 	return &Service{
