@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/png"
 	"net/http"
 	"strings"
 	"time"
@@ -160,7 +161,7 @@ func resizeImage(imgBytes []byte) ([]byte, *types.Error) {
 		}
 	}
 
-	img, errDecode := jpeg.Decode(bytes.NewReader(imgBytes))
+	img, _, errDecode := image.Decode(bytes.NewReader(imgBytes))
 	if errDecode != nil {
 		return nil, &types.Error{
 			Path:    ".UploadController->resizeImage()",
@@ -170,10 +171,14 @@ func resizeImage(imgBytes []byte) ([]byte, *types.Error) {
 		}
 	}
 	var imgConverted image.Image
-	if imageInfo.Width < 1000 {
-		imgConverted = resize.Resize(uint((imageInfo.Width * 80 / 100)), 0, img, resize.Lanczos3)
+	if imageInfo.Width < imageInfo.Height {
+		imgConverted = resize.Resize(0, 1000, img, resize.Lanczos3)
 	} else {
-		imgConverted = resize.Resize(1000, 0, img, resize.Lanczos3)
+		if imageInfo.Width < 1000 {
+			imgConverted = resize.Resize(uint((imageInfo.Width * 80 / 100)), 0, img, resize.Lanczos3)
+		} else {
+			imgConverted = resize.Resize(1000, 0, img, resize.Lanczos3)
+		}
 	}
 
 	imgBuffer := new(bytes.Buffer)
