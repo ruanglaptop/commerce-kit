@@ -790,15 +790,7 @@ func (c *HTTPClient) CallClientWithBaseURLGiven(ctx *context.Context, url string
 		}
 	}
 
-	urlPath, err := url.Parse(fmt.Sprintf("%s", url))
-	if err != nil {
-		errDo = &ResponseError{
-			Error: err,
-		}
-		return errDo
-	}
-
-	req, err := http.NewRequest(string(method), urlPath.String(), bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(string(method), url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		errDo = &ResponseError{
 			Error: err,
