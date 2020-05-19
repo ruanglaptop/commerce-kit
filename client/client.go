@@ -790,7 +790,7 @@ func (c *HTTPClient) CallClientWithBaseURLGiven(ctx *context.Context, url string
 		}
 	}
 
-	urlPath, err := url.Parse(url)
+	urlPath, err := url.Parse(fmt.Sprintf("%s", url))
 	if err != nil {
 		errDo = &ResponseError{
 			Error: err,
