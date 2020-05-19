@@ -137,7 +137,7 @@ func (s *AcknowledgeRequestService) Acknowledge(ctx *context.Context, status str
 
 	for _, clientRequest := range clientRequests {
 		// acknowledge client to commit / rollback
-		responseError := clientRequest.Client.CallClient(
+		responseError := clientRequest.Client.CallClientWithBaseURLGiven(
 			ctx,
 			fmt.Sprintf("%s?s=%s", clientRequest.Request.URL, status),
 			Method(clientRequest.Request.Method),
