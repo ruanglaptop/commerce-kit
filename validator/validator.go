@@ -95,6 +95,7 @@ type ValidateAccessParams struct {
 	UpdatedObject    interface{}
 	WarehouseIDs     *[]int
 	IsCurrentService bool
+	UserJSONMarshal  *string
 }
 
 func sorting(currentObject reflect.Value) {
@@ -286,15 +287,20 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 		return ErrUnauthorized
 	}
 
-	val, err := s.redisClient.Get("login:" + *params.Key).Result()
-	if err != nil {
-		return err
-	}
-
 	var user UserSession
 	var userData Data
+	var err error
+	userJSONMarshal := ""
+	if params.UserJSONMarshal == nil || *params.UserJSONMarshal == "" {
+		userJSONMarshal, err = s.redisClient.Get("login:" + *params.Key).Result()
+		if err != nil {
+			return err
+		}
+	} else {
+		userJSONMarshal = *params.UserJSONMarshal
+	}
 
-	if err = json.Unmarshal([]byte(val), &userData); err != nil {
+	if err = json.Unmarshal([]byte(userJSONMarshal), &userData); err != nil {
 		return err
 	}
 	user = *userData.User
