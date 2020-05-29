@@ -95,6 +95,7 @@ type HTTPClient struct {
 	clientRequestLogStorage   ClientRequestLogStorage
 	acknowledgeRequestService AcknowledgeRequestServiceInterface
 	clientCacheService        ClientCacheServiceInterface
+	redisClient               *redis.Client
 	APIURL                    string
 	HTTPClient                *http.Client
 	MaxNetworkRetries         int
@@ -580,7 +581,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 }
 
 // CallClientWithCachingInRedis call client with caching in redis
-func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, redisClient *redis.Client, durationInSecond int, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, durationInSecond int, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -605,7 +606,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, redisCli
 	}
 
 	//collect from redis if already exist
-	val, errRedis := redisClient.Get("apicaching:" + urlPath.String()).Result()
+	val, errRedis := c.redisClient.Get("apicaching:" + urlPath.String()).Result()
 	if errRedis != nil {
 		errDo = &ResponseError{
 			Error:   errRedis,
@@ -753,7 +754,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, redisCli
 			`, "apicaching:"+urlPath.String(), err)
 		}
 
-		if errRedis = redisClient.Set(
+		if errRedis = c.redisClient.Set(
 			fmt.Sprintf("%s:%s", "apicaching", urlPath.String()),
 			sessionBytes,
 			time.Second*time.Duration(durationInSecond),
@@ -1542,6 +1543,7 @@ func NewHTTPClient(
 	clientRequestLogStorage ClientRequestLogStorage,
 	acknowledgeRequestService AcknowledgeRequestServiceInterface,
 	clientCacheService ClientCacheServiceInterface,
+	redisClient *redis.Client,
 ) *HTTPClient {
 	if config.HTTPClient == nil {
 		config.HTTPClient = httpClient
@@ -1561,6 +1563,7 @@ func NewHTTPClient(
 		acknowledgeRequestService: acknowledgeRequestService,
 		clientCacheService:        clientCacheService,
 		ClientName:                config.ClientName,
+		redisClient:               redisClient,
 	}
 }
 
