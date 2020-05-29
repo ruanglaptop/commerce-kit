@@ -612,24 +612,24 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 			Error:   errRedis,
 			Message: "Error while collecting from redis",
 		}
-		log.Printf(`\n
-		======================================================================\n
-		Error Collecting Caching in "CallClientWithCachingInRedis":\n
-		"key": %s,\n
-		Error: %v,\n
-		======================================================================\n
+		log.Printf(`
+		======================================================================
+		Error Collecting Caching in "CallClientWithCachingInRedis":
+		"key": %s
+		Error: %v
+		======================================================================
 		`, "apicaching:"+urlPath.String(), errRedis)
 	}
 
 	if val != "" {
 		isSuccess := true
-		if errJSON := json.Unmarshal([]byte(val), &response); err != nil {
-			log.Printf(`\n
-			======================================================================\n
-			Error Collecting Caching in "CallClientWithCachingInRedis":\n
-			"key": %s,\n
-			Error: %v,\n
-			======================================================================\n
+		if errJSON := json.Unmarshal([]byte(val), &result); errJSON != nil {
+			log.Printf(`
+			======================================================================
+			Error Collecting Caching in "CallClientWithCachingInRedis":
+			"key": %s,
+			Error: %v,
+			======================================================================
 			`, "apicaching:"+urlPath.String(), errJSON)
 			isSuccess = false
 		}
@@ -743,28 +743,17 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 			return errDo
 		}
 
-		sessionBytes, err := json.Marshal(response)
-		if err != nil {
-			log.Printf(`\n
-			======================================================================\n
-			Error Storing Caching in "CallClientWithCachingInRedis":\n
-			"key": %s,\n
-			Error: %v,\n
-			======================================================================\n
-			`, "apicaching:"+urlPath.String(), err)
-		}
-
 		if errRedis = c.redisClient.Set(
 			fmt.Sprintf("%s:%s", "apicaching", urlPath.String()),
-			sessionBytes,
+			response,
 			time.Second*time.Duration(durationInSecond),
 		).Err(); err != nil {
-			log.Printf(`\n
-			======================================================================\n
-			Error Storing Caching in "CallClientWithCachingInRedis":\n
-			"key": %s,\n
-			Error: %v,\n
-			======================================================================\n
+			log.Printf(`
+			======================================================================
+			Error Storing Caching in "CallClientWithCachingInRedis":
+			"key": %s,
+			Error: %v,
+			======================================================================
 			`, "apicaching:"+urlPath.String(), err)
 		}
 	}
