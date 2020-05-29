@@ -608,10 +608,6 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 	//collect from redis if already exist
 	val, errRedis := c.redisClient.Get("apicaching:" + urlPath.String()).Result()
 	if errRedis != nil {
-		errDo = &ResponseError{
-			Error:   errRedis,
-			Message: "Error while collecting from redis",
-		}
 		log.Printf(`
 		======================================================================
 		Error Collecting Caching in "CallClientWithCachingInRedis":
