@@ -213,7 +213,7 @@ func (s *ValidatorAccess) validatePut(warehouseIDMap map[int]*int, params *Valid
 		if currentObject.Type().Field(i).Name == "WarehouseID" || currentObject.Type().Field(i).Name == "WarehouseSourceID" {
 			id := updatedObject.Field(i).Int()
 			if warehouseIDMap[int(id)] == nil {
-				return ErrUnauthorized
+				return ErrForbidden
 			}
 		}
 		if currentObject.Type().Field(i).Name == "WarehouseIDs" {
@@ -221,7 +221,7 @@ func (s *ValidatorAccess) validatePut(warehouseIDMap map[int]*int, params *Valid
 			for j := 0; j < len; j++ {
 				currentElement := updatedObject.Field(i).Index(j)
 				if warehouseIDMap[int(currentElement.Int())] == nil {
-					return ErrUnauthorized
+					return ErrForbidden
 				}
 			}
 		}
@@ -235,7 +235,7 @@ func (s *ValidatorAccess) validatePut(warehouseIDMap map[int]*int, params *Valid
 		if currentObject.Type().Field(i).Name == "WarehouseID" || currentObject.Type().Field(i).Name == "WarehouseSourceID" {
 			id := updatedObject.Field(i).Int()
 			if warehouseIDMap[int(id)] == nil {
-				return ErrUnauthorized
+				return ErrForbidden
 			}
 		}
 		updatedFields = getUpdatedFields(currentObject.Type().Field(i), currentObject.Field(i), updatedObject.Field(i), updatedFields)
@@ -244,11 +244,11 @@ func (s *ValidatorAccess) validatePut(warehouseIDMap map[int]*int, params *Valid
 	for field, value := range updatedFields {
 		if field != "ID" {
 			if accessesMap[*params.MethodName][*params.Path]["field"][field] == nil {
-				return ErrUnauthorized
+				return ErrForbidden
 			}
 			if accessesMap[*params.MethodName][*params.Path][field] != nil {
 				if accessesMap[*params.MethodName][*params.Path][field][value] == nil {
-					return ErrUnauthorized
+					return ErrForbidden
 				}
 			}
 		}
@@ -274,7 +274,7 @@ func (s *ValidatorAccess) validatePost(warehouseIDMap map[int]*int, params *Vali
 		}
 		if accessesMap[*params.MethodName][*params.Path][currentObject.Type().Field(i).Name] != nil {
 			if accessesMap[*params.MethodName][*params.Path][currentObject.Type().Field(i).Name][object.String()] == nil {
-				return ErrUnauthorized
+				return ErrForbidden
 			}
 		}
 	}
@@ -287,7 +287,7 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 		return nil
 	}
 	if params.Key == nil {
-		return ErrUnauthorized
+		return ErrForbidden
 	}
 
 	var user UserSession
@@ -358,7 +358,7 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 	}
 
 	if accessesMap[*params.MethodName][*params.Path] == nil {
-		return ErrUnauthorized
+		return ErrForbidden
 	}
 
 	if *params.MethodName == "PUT" {
@@ -404,7 +404,7 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 			length := len(*params.WarehouseIDs)
 			for i := 0; i < length; i++ {
 				if warehouseIDMap[(*params.WarehouseIDs)[i]] == nil {
-					return ErrUnauthorized
+					return ErrForbidden
 				}
 			}
 		}
@@ -418,13 +418,13 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 					if currentObject.Type().Field(i).Name == "WarehouseID" || currentObject.Type().Field(i).Name == "WarehouseSourceID" {
 						id := currentObject.Field(i).Int()
 						if warehouseIDMap[int(id)] == nil {
-							return ErrUnauthorized
+							return ErrForbidden
 						}
 					}
 					if accessesMap[*params.MethodName][*params.Path][currentObject.Type().Field(i).Name] != nil {
 						if accessesMap[*params.MethodName][*params.Path][currentObject.Type().Field(i).Name][currentObject.Field(i).String()] == nil {
 							if *params.MethodName == "POST" || *params.MethodName == "DELETE" {
-								return ErrUnauthorized
+								return ErrForbidden
 							}
 						}
 					}
@@ -433,7 +433,7 @@ func (s *ValidatorAccess) ValidateAccess(params *ValidateAccessParams) error {
 				id := currentObject.Int()
 
 				if warehouseIDMap[int(id)] == nil {
-					return ErrUnauthorized
+					return ErrForbidden
 				}
 			}
 
