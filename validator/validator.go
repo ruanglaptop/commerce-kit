@@ -14,6 +14,9 @@ import (
 var (
 	//ErrUnauthorized declare specific error for granted access on routing
 	ErrUnauthorized = fmt.Errorf("Unauthorized")
+
+	//ErrForbidden declare specific error for granted access on forbidden route
+	ErrForbidden = fmt.Errorf("Forbidden")
 )
 
 // Access object of Access to reflect the Access data for response purpose
