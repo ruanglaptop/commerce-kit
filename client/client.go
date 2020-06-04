@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/afex/hystrix-go/hystrix"
+	"github.com/go-redis/redis"
 	"github.com/payfazz/commerce-kit/appcontext"
 	"github.com/payfazz/commerce-kit/types"
 )
@@ -79,6 +81,7 @@ type GenericHTTPClient interface {
 	Do(req *http.Request) (string, *ResponseError)
 	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCaching(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithCachingInRedis(ctx *context.Context, durationInSecond int, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithoutLog(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithBaseURLGiven(ctx *context.Context, url string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
@@ -92,6 +95,7 @@ type HTTPClient struct {
 	clientRequestLogStorage   ClientRequestLogStorage
 	acknowledgeRequestService AcknowledgeRequestServiceInterface
 	clientCacheService        ClientCacheServiceInterface
+	redisClient               *redis.Client
 	APIURL                    string
 	HTTPClient                *http.Client
 	MaxNetworkRetries         int
@@ -570,6 +574,183 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 				Error: err,
 			}
 			return errDo
+		}
+	}
+
+	return errDo
+}
+
+// CallClientWithCachingInRedis call client with caching in redis
+func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, durationInSecond int, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+	var jsonData []byte
+	var err error
+	var response string
+	var errDo *ResponseError
+
+	if request != nil && request != "" {
+		jsonData, err = json.Marshal(request)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	//collect from redis if already exist
+	val, errRedis := c.redisClient.Get("apicaching:" + urlPath.String()).Result()
+	if errRedis != nil {
+		log.Printf(`
+		======================================================================
+		Error Collecting Caching in "CallClientWithCachingInRedis":
+		"key": %s
+		Error: %v
+		======================================================================
+		`, "apicaching:"+urlPath.String(), errRedis)
+	}
+
+	if val != "" {
+		isSuccess := true
+		if errJSON := json.Unmarshal([]byte(val), &result); errJSON != nil {
+			log.Printf(`
+			======================================================================
+			Error Collecting Caching in "CallClientWithCachingInRedis":
+			"key": %s,
+			Error: %v,
+			======================================================================
+			`, "apicaching:"+urlPath.String(), errJSON)
+			isSuccess = false
+		}
+		if isSuccess {
+			return nil
+		}
+	}
+
+	req, err := http.NewRequest(string(method), urlPath.String(), bytes.NewBuffer(jsonData))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	clientID, clientType := determineClient(ctx)
+	requestRaw := types.Metadata{}
+	if request != nil && request != "" {
+		err = json.Unmarshal(jsonData, &requestRaw)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	var clientRequestLog *ClientRequestLog
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
+	requestReferenceID := appcontext.RequestReferenceID(ctx)
+	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
+	if method != GET {
+		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+			ClientID:       clientID,
+			ClientType:     clientType,
+			Method:         string(method),
+			URL:            urlPath.String(),
+			Header:         fmt.Sprintf("%v", req.Header),
+			Request:        requestRaw,
+			Status:         "calling",
+			HTTPStatusCode: 0,
+			ReferenceID:    requestReferenceID,
+		})
+	}
+
+	response, errDo = c.Do(req)
+	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		if method != GET {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+			clientRequestLog.Status = "failed"
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		}
+		return errDo
+	}
+
+	type TransactionID struct {
+		ID int `json:"id"`
+	}
+	var transactionID TransactionID
+	json.Unmarshal([]byte(response), &transactionID)
+
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+		if errDo != nil {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		}
+		clientRequestLog.Status = "success"
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+
+		requestStatus := appcontext.RequestStatus(ctx)
+		if requestStatus == nil && isAcknowledgeNeeded {
+			currentClientRequests := []*ClientRequest{}
+			temp := appcontext.ClientRequests(ctx)
+			if temp != nil {
+				currentClientRequests = temp.([]*ClientRequest)
+			}
+			currentClientRequests = append(currentClientRequests, &ClientRequest{
+				Client:  c,
+				Request: clientRequestLog,
+			})
+			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
+			// ignore when error occurs
+			_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
+				RequestID:          clientRequestLog.ID,
+				CommitStatus:       "on_progress",
+				ReservedHolder:     requestRaw,
+				ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
+				Message:            "",
+			})
+		}
+	}
+
+	if response != "" && result != nil {
+		err = json.Unmarshal([]byte(response), result)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+
+		if errRedis = c.redisClient.Set(
+			fmt.Sprintf("%s:%s", "apicaching", urlPath.String()),
+			response,
+			time.Second*time.Duration(durationInSecond),
+		).Err(); err != nil {
+			log.Printf(`
+			======================================================================
+			Error Storing Caching in "CallClientWithCachingInRedis":
+			"key": %s,
+			Error: %v,
+			======================================================================
+			`, "apicaching:"+urlPath.String(), err)
 		}
 	}
 
@@ -1347,6 +1528,7 @@ func NewHTTPClient(
 	clientRequestLogStorage ClientRequestLogStorage,
 	acknowledgeRequestService AcknowledgeRequestServiceInterface,
 	clientCacheService ClientCacheServiceInterface,
+	redisClient *redis.Client,
 ) *HTTPClient {
 	if config.HTTPClient == nil {
 		config.HTTPClient = httpClient
@@ -1366,6 +1548,7 @@ func NewHTTPClient(
 		acknowledgeRequestService: acknowledgeRequestService,
 		clientCacheService:        clientCacheService,
 		ClientName:                config.ClientName,
+		redisClient:               redisClient,
 	}
 }
 

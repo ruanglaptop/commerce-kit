@@ -197,3 +197,31 @@ func AdvancedError(w http.ResponseWriter, slackNotifier notif.Notifier, logNotif
 		})
 	}
 }
+
+// ErrorRPC writes error rpc response
+func ErrorRPC(n notif.Notifier, err types.Error) {
+	if err.Error != nil {
+		log.Printf("INFO: %v\n", err.Error.Error())
+		log.Printf("DETAIL [%s - %s]: %s\n", err.Path, err.Type, err.Message)
+		type stackTracer interface {
+			StackTrace() errors.StackTrace
+		}
+
+		var st errors.StackTrace
+		if err, ok := err.Error.(stackTracer); ok {
+			st = err.StackTrace()
+			fmt.Printf("INFO: %+v\n", st[0])
+		}
+
+		if n != nil {
+			errMessage := fmt.Sprintf("ERROR: %v\n", err)
+			if len(st) > 0 {
+				errMessage = fmt.Sprintf("\n\nStack Trace: %v\n", st[0])
+			}
+
+			if err := n.Notify(fmt.Sprintf("```%s```", errMessage)); err != nil {
+				fmt.Println("NOTIFY TO SLACK ERROR: ", err)
+			}
+		}
+	}
+}
