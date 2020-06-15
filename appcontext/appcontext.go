@@ -83,6 +83,9 @@ const (
 
 	// KeyWarehouseType represents the value of warehouse type
 	KeyWarehouseType contextKey = "KeyWarehouseType"
+
+	// KeyLocationCode represents the value of location code
+	KeyLocationCode contextKey = "KeyLocationCode"
 )
 
 // Owner gets the data owner from the context
@@ -123,6 +126,16 @@ func SessionID(ctx *context.Context) *string {
 		return &v
 	}
 	return nil
+}
+
+// LocationCode gets the location code data from the context
+func LocationCode(ctx *context.Context) *string {
+	locationCode := (*ctx).Value(KeyLocationCode)
+	if location != nil {
+		v := locationCode.(string)
+		return v
+	}
+	return ""
 }
 
 // WarehouseType gets the warehouse type data from the context
