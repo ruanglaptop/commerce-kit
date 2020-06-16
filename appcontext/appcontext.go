@@ -129,9 +129,9 @@ func SessionID(ctx *context.Context) *string {
 }
 
 // LocationCode gets the location code data from the context
-func LocationCode(ctx *context.Context) *string {
+func LocationCode(ctx *context.Context) string {
 	locationCode := (*ctx).Value(KeyLocationCode)
-	if location != nil {
+	if locationCode != nil {
 		v := locationCode.(string)
 		return v
 	}
