@@ -638,6 +638,7 @@ func (r *PostgresStorage) insertData(ctx *context.Context, sqlStr string, dbArgs
 	}
 
 	sqlStr = strings.TrimSuffix(sqlStr, ",")
+	sqlStr += fmt.Sprintf(" RETURNING %s", r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -837,7 +838,8 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 	sqlStr = fmt.Sprintf(`%s
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
-	`, sqlStr, r.selectFields)
+	RETURNING %s
+	`, sqlStr, r.selectFields, r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -865,7 +867,8 @@ func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs
 	sqlStr = fmt.Sprintf(`%s
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
-	`, sqlStr, r.selectFields)
+	RETURNING %s
+	`, sqlStr, r.selectFields, r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
