@@ -534,6 +534,7 @@ func (r *PostgresStorage) InsertMany(ctx *context.Context, elem interface{}) err
 	}
 
 	sqlStr = strings.TrimSuffix(sqlStr, ",")
+	sqlStr += fmt.Sprintf(" RETURNING %s", r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
