@@ -44,13 +44,13 @@ func ClientError(w http.ResponseWriter, n notif.Notifier, status int, title stri
 	var errorCode string
 	switch status {
 	case http.StatusUnauthorized:
-		errorCode = "Unauthorized"
+		errorCode = "UnauthorizedError"
 	case http.StatusNotFound:
-		errorCode = "NotFound"
+		errorCode = "NotFoundError"
 	case http.StatusBadRequest:
-		errorCode = "BadRequest"
+		errorCode = "BadRequestError"
 	case http.StatusUnprocessableEntity:
-		errorCode = "UnprocessableEntity"
+		errorCode = "UnprocessableEntityError"
 	}
 
 	json.NewEncoder(w).Encode(clientResponse{
