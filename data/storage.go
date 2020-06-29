@@ -34,9 +34,11 @@ type GenericStorage interface {
 	FindAll(ctx *context.Context, elems interface{}, page int, limit int, isAsc bool) error
 	Insert(ctx *context.Context, elem interface{}) error
 	InsertMany(ctx *context.Context, elem interface{}) error
+	InsertManyWithResult(ctx *context.Context, elem interface{}, bulk interface{}) error
 	InsertManyWithTime(ctx *context.Context, elem interface{}, createdAt time.Time) error
 	Update(ctx *context.Context, elem interface{}) error
 	UpdateMany(ctx *context.Context, elems interface{}) error
+	UpdateManyWithResult(ctx *context.Context, elem interface{}, bulk interface{}) error
 	Delete(ctx *context.Context, id interface{}) error
 	DeleteMany(ctx *context.Context, ids interface{}) error
 	CountAll(ctx *context.Context, count interface{}) error
@@ -59,16 +61,17 @@ type ImmutableGenericStorage interface {
 
 // PostgresStorage is the postgres implementation of generic Storage
 type PostgresStorage struct {
-	db                  Queryer
-	tableName           string
-	elemType            reflect.Type
-	isImmutable         bool
-	selectFields        string
-	insertFields        string
-	insertParams        string
-	updateSetFields     string
-	updateManySetFields string
-	logStorage          LogStorage
+	db                     Queryer
+	tableName              string
+	elemType               reflect.Type
+	isImmutable            bool
+	selectFields           string
+	updateManySelectFields string
+	insertFields           string
+	insertParams           string
+	updateSetFields        string
+	updateManySetFields    string
+	logStorage             LogStorage
 }
 
 // LogStorage storage for logs
@@ -542,7 +545,99 @@ func (r *PostgresStorage) InsertMany(ctx *context.Context, elem interface{}) err
 	}
 	defer statement.Close()
 
-	_, err = statement.Get(dbArgs)
+	_, err = statement.Exec(dbArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// InsertManyWithResult is function for creating many datas into specific table in database.
+func (r *PostgresStorage) InsertManyWithResult(ctx *context.Context, elem interface{}, bulk interface{}) error {
+	currentAccount := appcontext.CurrentAccount(ctx)
+	currentUserID, _ := determineUser(ctx)
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	sqlStr := fmt.Sprintf(`
+	INSERT INTO "%s"(%s)
+	VALUES `, r.tableName, r.insertFields)
+
+	var dbArgs map[string]interface{}
+
+	datas := reflect.ValueOf(elem)
+
+	insertFields := strings.Split(r.insertFields, ",")
+	limit := 60000 / len(insertFields)
+	indexData := 0
+	if datas.Kind() == reflect.Slice {
+		for i := 0; i < datas.Len(); i++ {
+			sqlStr += fmt.Sprintf("(%s),", insertParams(r.elemType, r.isImmutable, i+1))
+			arg := r.insertArgs(currentAccount, currentUserID, datas.Index(i), i+1)
+			if indexData == 0 {
+				dbArgs = arg
+			} else {
+				for k, v := range arg {
+					dbArgs[k] = v
+				}
+			}
+			indexData++
+			if indexData == limit {
+				err := r.insertDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				if err != nil {
+					return err
+				}
+
+				indexData = 0
+				sqlStr = fmt.Sprintf(`
+				INSERT INTO "%s"(%s)
+				VALUES `, r.tableName, r.insertFields)
+				dbArgs = map[string]interface{}{}
+			}
+		}
+	}
+
+	if datas.Kind() == reflect.Map {
+		for key, element := range datas.MapKeys() {
+			sqlStr += fmt.Sprintf("(%s),", insertParams(r.elemType, r.isImmutable, key+1))
+			arg := r.insertArgs(currentAccount, currentUserID, datas.MapIndex(element), key+1)
+			if indexData == 0 {
+				dbArgs = arg
+			} else {
+				for k, v := range arg {
+					dbArgs[k] = v
+				}
+			}
+			indexData++
+			if indexData == limit {
+				err := r.insertDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				if err != nil {
+					return err
+				}
+
+				indexData = 0
+				sqlStr = fmt.Sprintf(`
+				INSERT INTO "%s"(%s)
+				VALUES `, r.tableName, r.insertFields)
+				dbArgs = map[string]interface{}{}
+			}
+		}
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
+	sqlStr += fmt.Sprintf(" RETURNING %s", r.selectFields)
+
+	statement, err := db.PrepareNamed(sqlStr)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	err = statement.Select(bulk, dbArgs)
 	if err != nil {
 		return err
 	}
@@ -639,6 +734,29 @@ func (r *PostgresStorage) insertData(ctx *context.Context, sqlStr string, dbArgs
 	}
 
 	sqlStr = strings.TrimSuffix(sqlStr, ",")
+
+	statement, err := db.PrepareNamed(sqlStr)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(dbArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresStorage) insertDataWithResult(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}, bulk interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
 	sqlStr += fmt.Sprintf(" RETURNING %s", r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
@@ -647,7 +765,7 @@ func (r *PostgresStorage) insertData(ctx *context.Context, sqlStr string, dbArgs
 	}
 	defer statement.Close()
 
-	_, err = statement.Get(dbArgs)
+	err = statement.Select(bulk, dbArgs)
 	if err != nil {
 		return err
 	}
@@ -839,8 +957,7 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 	sqlStr = fmt.Sprintf(`%s
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
-	RETURNING %s
-	`, sqlStr, r.selectFields, r.selectFields)
+	`, sqlStr, r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -848,7 +965,7 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 	}
 	defer statement.Close()
 
-	_, err = statement.Get(dbArgs)
+	_, err = statement.Exec(dbArgs)
 	if err != nil {
 		return err
 	}
@@ -868,8 +985,7 @@ func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs
 	sqlStr = fmt.Sprintf(`%s
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
-	RETURNING %s
-	`, sqlStr, r.selectFields, r.selectFields)
+	`, sqlStr, r.selectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -877,7 +993,141 @@ func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs
 	}
 	defer statement.Close()
 
-	_, err = statement.Get(dbArgs)
+	_, err = statement.Exec(dbArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateManyWithResult updates the element in the database.
+// It will update the "updatedAt" field.
+func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems interface{}, bulk interface{}) error {
+	currentUserID, _ := determineUser(ctx)
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	dbArgs := map[string]interface{}{}
+
+	sqlStr := fmt.Sprintf(`
+	UPDATE "%s" as "currentTable" 
+	SET
+		%s
+	FROM (VALUES
+	`, r.tableName, r.updateManySetFields)
+
+	datas := reflect.ValueOf(elems)
+
+	limit := 2000
+	indexData := 0
+	if datas.Kind() == reflect.Slice {
+		for i := 0; i < datas.Len(); i++ {
+			sqlStrIndex, arg := r.updateManyParams(currentUserID, datas.Index(i), i+1)
+			sqlStr += sqlStrIndex
+			if indexData == 0 {
+				dbArgs = arg
+			} else {
+				for k, v := range arg {
+					dbArgs[k] = v
+				}
+			}
+			indexData++
+			if indexData == limit {
+				err := r.updateDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				if err != nil {
+					return err
+				}
+
+				indexData = 0
+				sqlStr = fmt.Sprintf(`
+				UPDATE "%s" as "currentTable" 
+				SET
+					%s
+				FROM (VALUES
+				`, r.tableName, r.updateManySetFields)
+				dbArgs = map[string]interface{}{}
+			}
+		}
+	}
+
+	if datas.Kind() == reflect.Map {
+		for key, element := range datas.MapKeys() {
+			sqlStrIndex, arg := r.updateManyParams(currentUserID, datas.MapIndex(element), key+1)
+			sqlStr += sqlStrIndex
+			if indexData == 0 {
+				dbArgs = arg
+			} else {
+				for k, v := range arg {
+					dbArgs[k] = v
+				}
+			}
+			indexData++
+			if indexData == limit {
+				err := r.updateDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				if err != nil {
+					return err
+				}
+
+				indexData = 0
+				sqlStr = fmt.Sprintf(`
+				UPDATE "%s" as "currentTable" 
+				SET
+					%s
+				FROM (VALUES
+				`, r.tableName, r.updateManySetFields)
+				dbArgs = map[string]interface{}{}
+			}
+		}
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
+
+	sqlStr = fmt.Sprintf(`%s
+	) as "updatedTable"("updatedAt", "updatedBy", %s)
+	where cast("currentTable".id as int) = cast("updatedTable".id as int)
+	RETURNING %s
+	`, sqlStr, r.selectFields, r.updateManySelectFields)
+
+	statement, err := db.PrepareNamed(sqlStr)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	err = statement.Select(bulk, dbArgs)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresStorage) updateDataWithResult(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}, bulk interface{}) error {
+	db := r.db
+	tx, ok := TxFromContext(ctx)
+	if ok {
+		db = tx
+	}
+
+	sqlStr = strings.TrimSuffix(sqlStr, ",")
+
+	sqlStr = fmt.Sprintf(`%s
+	) as "updatedTable"("updatedAt", "updatedBy", %s)
+	where cast("currentTable".id as int) = cast("updatedTable".id as int)
+	RETURNING %s
+	`, sqlStr, r.selectFields, r.updateManySelectFields)
+
+	statement, err := db.PrepareNamed(sqlStr)
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	err = statement.Select(bulk, dbArgs)
 	if err != nil {
 		return err
 	}
@@ -1307,16 +1557,17 @@ func NewLogStorage(db *sqlx.DB, logName string) *LogStorage {
 func NewPostgresStorage(db *sqlx.DB, tableName string, elem interface{}, cfg PostgresConfig, logStorage LogStorage) *PostgresStorage {
 	elemType := reflect.TypeOf(elem)
 	return &PostgresStorage{
-		db:                  db,
-		tableName:           tableName,
-		elemType:            elemType,
-		isImmutable:         cfg.IsImmutable,
-		selectFields:        selectFields(elemType),
-		insertFields:        insertFields(elemType, cfg.IsImmutable),
-		insertParams:        insertParams(elemType, cfg.IsImmutable, 0),
-		updateSetFields:     updateSetFields(elemType),
-		updateManySetFields: updateManySetFields(elemType),
-		logStorage:          logStorage,
+		db:                     db,
+		tableName:              tableName,
+		elemType:               elemType,
+		isImmutable:            cfg.IsImmutable,
+		selectFields:           selectFields(elemType),
+		insertFields:           insertFields(elemType, cfg.IsImmutable),
+		insertParams:           insertParams(elemType, cfg.IsImmutable, 0),
+		updateSetFields:        updateSetFields(elemType),
+		updateManySetFields:    updateManySetFields(elemType),
+		updateManySelectFields: updateManySelectFields(elemType),
+		logStorage:             logStorage,
 	}
 }
 
@@ -1393,6 +1644,18 @@ func updateManySetFields(elemType reflect.Type) string {
 	}
 
 	return strings.Join(setManyFields, ",")
+}
+
+func updateManySelectFields(elemType reflect.Type) string {
+	dbFields := []string{}
+	for i := 0; i < elemType.NumField(); i++ {
+		field := elemType.Field(i)
+		dbTag := field.Tag.Get("db")
+		if dbTag != "" && dbTag != "-" {
+			dbFields = append(dbFields, fmt.Sprintf(`"updatedTable"."%s"`, dbTag))
+		}
+	}
+	return strings.Join(dbFields, ",")
 }
 
 func idTag(dbTag string) bool {
