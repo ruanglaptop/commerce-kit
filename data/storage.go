@@ -542,7 +542,7 @@ func (r *PostgresStorage) InsertMany(ctx *context.Context, elem interface{}) err
 	}
 	defer statement.Close()
 
-	_, err = statement.Exec(dbArgs)
+	_, err = statement.Get(dbArgs)
 	if err != nil {
 		return err
 	}
@@ -647,7 +647,7 @@ func (r *PostgresStorage) insertData(ctx *context.Context, sqlStr string, dbArgs
 	}
 	defer statement.Close()
 
-	_, err = statement.Exec(dbArgs)
+	_, err = statement.Get(dbArgs)
 	if err != nil {
 		return err
 	}
@@ -848,7 +848,7 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 	}
 	defer statement.Close()
 
-	_, err = statement.Exec(dbArgs)
+	_, err = statement.Get(dbArgs)
 	if err != nil {
 		return err
 	}
@@ -877,7 +877,7 @@ func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs
 	}
 	defer statement.Close()
 
-	_, err = statement.Exec(dbArgs)
+	_, err = statement.Get(dbArgs)
 	if err != nil {
 		return err
 	}
