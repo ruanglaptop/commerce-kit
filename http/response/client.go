@@ -50,7 +50,7 @@ func ClientError(w http.ResponseWriter, n notif.Notifier, status int, title stri
 	case http.StatusBadRequest:
 		errorCode = "BadRequest"
 	case http.StatusUnprocessableEntity:
-		errorCode = "ValidationError"
+		errorCode = "UnprocessableEntity"
 	}
 
 	json.NewEncoder(w).Encode(clientResponse{
