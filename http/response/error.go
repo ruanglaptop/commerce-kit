@@ -43,17 +43,17 @@ func Error(w http.ResponseWriter, n notif.Notifier, data string, status int, err
 
 	switch status {
 	case http.StatusUnauthorized:
-		errorCode = "Unauthorized"
+		errorCode = "UnauthorizedError"
 	case http.StatusNotFound:
-		errorCode = "NotFound"
+		errorCode = "NotFoundError"
 	case http.StatusBadRequest:
-		errorCode = "BadRequest"
+		errorCode = "BadRequestError"
 	case http.StatusUnprocessableEntity:
-		errorCode = "ValidationError"
+		errorCode = "UnprocessableEntityError"
 	case http.StatusInternalServerError:
 		errorCode = "InternalServerError"
 	case http.StatusNotImplemented:
-		errorCode = "NotImplemented"
+		errorCode = "NotImplementedError"
 	}
 
 	errorFields := []*FieldError{}
