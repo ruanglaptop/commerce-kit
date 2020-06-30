@@ -114,13 +114,13 @@ func AdvancedError(w http.ResponseWriter, slackNotifier notif.Notifier, logNotif
 
 	switch status {
 	case http.StatusUnauthorized:
-		errorCode = "Unauthorized"
+		errorCode = "UnauthorizedError"
 	case http.StatusNotFound:
-		errorCode = "NotFound"
+		errorCode = "NotFoundError"
 	case http.StatusBadRequest:
-		errorCode = "BadRequest"
+		errorCode = "BadRequestError"
 	case http.StatusUnprocessableEntity:
-		errorCode = "UnprocessableEntity"
+		errorCode = "UnprocessableEntityError"
 	case http.StatusInternalServerError:
 		errorCode = "InternalServerError"
 	}

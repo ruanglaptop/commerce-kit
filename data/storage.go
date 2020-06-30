@@ -554,7 +554,7 @@ func (r *PostgresStorage) InsertMany(ctx *context.Context, elem interface{}) err
 }
 
 // InsertManyWithResult is function for creating many datas into specific table in database.
-func (r *PostgresStorage) InsertManyWithResult(ctx *context.Context, elem interface{}, bulk interface{}) error {
+func (r *PostgresStorage) InsertManyWithResult(ctx *context.Context, elem interface{}, result interface{}) error {
 	currentAccount := appcontext.CurrentAccount(ctx)
 	currentUserID, _ := determineUser(ctx)
 	db := r.db
@@ -587,7 +587,7 @@ func (r *PostgresStorage) InsertManyWithResult(ctx *context.Context, elem interf
 			}
 			indexData++
 			if indexData == limit {
-				err := r.insertDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				err := r.insertDataWithResult(ctx, sqlStr, dbArgs, result)
 				if err != nil {
 					return err
 				}
@@ -614,7 +614,7 @@ func (r *PostgresStorage) InsertManyWithResult(ctx *context.Context, elem interf
 			}
 			indexData++
 			if indexData == limit {
-				err := r.insertDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				err := r.insertDataWithResult(ctx, sqlStr, dbArgs, result)
 				if err != nil {
 					return err
 				}
@@ -637,7 +637,7 @@ func (r *PostgresStorage) InsertManyWithResult(ctx *context.Context, elem interf
 	}
 	defer statement.Close()
 
-	err = statement.Select(bulk, dbArgs)
+	err = statement.Select(result, dbArgs)
 	if err != nil {
 		return err
 	}
@@ -749,7 +749,7 @@ func (r *PostgresStorage) insertData(ctx *context.Context, sqlStr string, dbArgs
 	return nil
 }
 
-func (r *PostgresStorage) insertDataWithResult(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}, bulk interface{}) error {
+func (r *PostgresStorage) insertDataWithResult(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}, result interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -765,7 +765,7 @@ func (r *PostgresStorage) insertDataWithResult(ctx *context.Context, sqlStr stri
 	}
 	defer statement.Close()
 
-	err = statement.Select(bulk, dbArgs)
+	err = statement.Select(result, dbArgs)
 	if err != nil {
 		return err
 	}
@@ -1003,7 +1003,7 @@ func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs
 
 // UpdateManyWithResult updates the element in the database.
 // It will update the "updatedAt" field.
-func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems interface{}, bulk interface{}) error {
+func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems interface{}, result interface{}) error {
 	currentUserID, _ := determineUser(ctx)
 	db := r.db
 	tx, ok := TxFromContext(ctx)
@@ -1037,7 +1037,7 @@ func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems inter
 			}
 			indexData++
 			if indexData == limit {
-				err := r.updateDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				err := r.updateDataWithResult(ctx, sqlStr, dbArgs, result)
 				if err != nil {
 					return err
 				}
@@ -1067,7 +1067,7 @@ func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems inter
 			}
 			indexData++
 			if indexData == limit {
-				err := r.updateDataWithResult(ctx, sqlStr, dbArgs, bulk)
+				err := r.updateDataWithResult(ctx, sqlStr, dbArgs, result)
 				if err != nil {
 					return err
 				}
@@ -1098,7 +1098,7 @@ func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems inter
 	}
 	defer statement.Close()
 
-	err = statement.Select(bulk, dbArgs)
+	err = statement.Select(result, dbArgs)
 	if err != nil {
 		return err
 	}
@@ -1106,7 +1106,7 @@ func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems inter
 	return nil
 }
 
-func (r *PostgresStorage) updateDataWithResult(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}, bulk interface{}) error {
+func (r *PostgresStorage) updateDataWithResult(ctx *context.Context, sqlStr string, dbArgs map[string]interface{}, result interface{}) error {
 	db := r.db
 	tx, ok := TxFromContext(ctx)
 	if ok {
@@ -1127,7 +1127,7 @@ func (r *PostgresStorage) updateDataWithResult(ctx *context.Context, sqlStr stri
 	}
 	defer statement.Close()
 
-	err = statement.Select(bulk, dbArgs)
+	err = statement.Select(result, dbArgs)
 	if err != nil {
 		return err
 	}
