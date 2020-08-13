@@ -71,6 +71,7 @@ type PostgresStorage struct {
 	insertParams           string
 	updateSetFields        string
 	updateManySetFields    string
+	updateManyAsFields     string
 	logStorage             LogStorage
 }
 
@@ -957,7 +958,7 @@ func (r *PostgresStorage) UpdateMany(ctx *context.Context, elems interface{}) er
 	sqlStr = fmt.Sprintf(`%s
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
-	`, sqlStr, r.selectFields)
+	`, sqlStr, r.updateManyAsFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -985,7 +986,7 @@ func (r *PostgresStorage) updateData(ctx *context.Context, sqlStr string, dbArgs
 	sqlStr = fmt.Sprintf(`%s
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
-	`, sqlStr, r.selectFields)
+	`, sqlStr, r.updateManyAsFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -1090,7 +1091,7 @@ func (r *PostgresStorage) UpdateManyWithResult(ctx *context.Context, elems inter
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
 	RETURNING %s
-	`, sqlStr, r.selectFields, r.updateManySelectFields)
+	`, sqlStr, r.updateManyAsFields, r.updateManySelectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -1119,7 +1120,7 @@ func (r *PostgresStorage) updateDataWithResult(ctx *context.Context, sqlStr stri
 	) as "updatedTable"("updatedAt", "updatedBy", %s)
 	where cast("currentTable".id as int) = cast("updatedTable".id as int)
 	RETURNING %s
-	`, sqlStr, r.selectFields, r.updateManySelectFields)
+	`, sqlStr, r.updateManyAsFields, r.updateManySelectFields)
 
 	statement, err := db.PrepareNamed(sqlStr)
 	if err != nil {
@@ -1158,42 +1159,56 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 			var val interface{}
 			var typeTime time.Time
 			var field reflect.Value
+			isNil := false
 			if v.Field(i).Kind() == reflect.Ptr {
-				field = v.Field(i).Elem()
+				if v.Field(i).IsNil() {
+					isNil = true
+				} else {
+					field = v.Field(i).Elem()
+				}
 			} else {
 				field = v.Field(i)
 			}
-			if field.Type() == reflect.TypeOf(typeMapString) {
-				metadataBytes, err := json.Marshal(field.Interface())
-				if err != nil {
-					val = "{}"
+			if !isNil {
+				if field.Type() == reflect.TypeOf(typeMapString) {
+					metadataBytes, err := json.Marshal(field.Interface())
+					if err != nil {
+						val = "{}"
+					} else {
+						val = string(metadataBytes)
+					}
 				} else {
-					val = string(metadataBytes)
+					val = field.Interface()
 				}
-			} else {
-				val = field.Interface()
 			}
 
-			if dbTag == "createdAt" || dbTag == "updatedAt" || field.Type() == reflect.TypeOf(typeTime) {
-				valTime := val.(time.Time)
-				val = valTime.Format(time.RFC3339)
-				sqlStr += fmt.Sprintf(`cast(:%s%d as timestamp),`, dbTag, index)
-				res[dbTag] = val
-			} else if field.Type() == reflect.TypeOf(typeMapString) {
-				sqlStr += fmt.Sprintf(`cast(:%s%d as jsonb),`, dbTag, index)
-				res[dbTag] = val
-			} else {
-				switch field.Kind() {
-				case reflect.String:
-					if r.elemType.Field(i).Tag.Get("cast") != "" {
-						sqlStr += fmt.Sprintf(`cast('%s' as %s),`, val, r.elemType.Field(i).Tag.Get("cast"))
-					} else {
-						sqlStr += fmt.Sprintf(`'%s',`, val)
+			if dbTag != "updatedAt" {
+				if isNil {
+					sqlStr += fmt.Sprintf(`cast(NULL as %s),`, r.elemType.Field(i).Tag.Get("cast"))
+				} else if dbTag == "createdAt" || field.Type() == reflect.TypeOf(typeTime) {
+					valTime := val.(time.Time)
+					val = valTime.Format(time.RFC3339)
+					sqlStr += fmt.Sprintf(`cast(:%s%d as timestamp),`, dbTag, index)
+					res[dbTag] = val
+				} else if field.Type() == reflect.TypeOf(typeMapString) {
+					sqlStr += fmt.Sprintf(`cast(:%s%d as jsonb),`, dbTag, index)
+					res[dbTag] = val
+				} else {
+					switch field.Kind() {
+					case reflect.String:
+						if r.elemType.Field(i).Tag.Get("cast") != "" {
+							sqlStr += fmt.Sprintf(`cast('%s' as %s),`, val, r.elemType.Field(i).Tag.Get("cast"))
+						} else if strings.Contains(val.(string), ":") {
+							sqlStr += fmt.Sprintf(":%s%d,", dbTag, index)
+							res[dbTag] = val
+						} else {
+							sqlStr += fmt.Sprintf(`'%s',`, val)
+						}
+						break
+					default:
+						sqlStr += fmt.Sprint(val, ",")
+						break
 					}
-					break
-				default:
-					sqlStr += fmt.Sprint(val, ",")
-					break
 				}
 			}
 		}
@@ -1567,6 +1582,7 @@ func NewPostgresStorage(db *sqlx.DB, tableName string, elem interface{}, cfg Pos
 		updateSetFields:        updateSetFields(elemType),
 		updateManySetFields:    updateManySetFields(elemType),
 		updateManySelectFields: updateManySelectFields(elemType),
+		updateManyAsFields:     updateManyAsFields(elemType),
 		logStorage:             logStorage,
 	}
 }
@@ -1638,7 +1654,7 @@ func updateManySetFields(elemType reflect.Type) string {
 	for i := 0; i < elemType.NumField(); i++ {
 		field := elemType.Field(i)
 		dbTag := field.Tag.Get("db")
-		if !readOnlyTag(dbTag) && !emptyTag(dbTag) {
+		if !readOnlyTag(dbTag) && !emptyTag(dbTag) && dbTag != "updatedAt" {
 			setManyFields = append(setManyFields, fmt.Sprintf(`"%s" = "updatedTable"."%s"`, dbTag, dbTag))
 		}
 	}
@@ -1653,6 +1669,18 @@ func updateManySelectFields(elemType reflect.Type) string {
 		dbTag := field.Tag.Get("db")
 		if dbTag != "" && dbTag != "-" {
 			dbFields = append(dbFields, fmt.Sprintf(`"updatedTable"."%s"`, dbTag))
+		}
+	}
+	return strings.Join(dbFields, ",")
+}
+
+func updateManyAsFields(elemType reflect.Type) string {
+	dbFields := []string{}
+	for i := 0; i < elemType.NumField(); i++ {
+		field := elemType.Field(i)
+		dbTag := field.Tag.Get("db")
+		if dbTag != "" && dbTag != "-" && dbTag != "updatedAt" {
+			dbFields = append(dbFields, fmt.Sprintf("\"%s\"", dbTag))
 		}
 	}
 	return strings.Join(dbFields, ",")
