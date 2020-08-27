@@ -1196,7 +1196,7 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 				} else {
 					switch field.Kind() {
 					case reflect.String:
-						if strings.Contains(field.String(), ":") {
+						if strings.Contains(field.String(), ":") || strings.Contains(field.String(), "'") {
 							sqlStr += fmt.Sprintf(":%s%d,", dbTag, index)
 							res[dbTag] = val
 						} else if r.elemType.Field(i).Tag.Get("cast") != "" {
