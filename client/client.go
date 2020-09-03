@@ -1501,20 +1501,6 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 			}
 			return errDo
 		}
-
-		if method == GET {
-
-			fmt.Printf(`Endpoint Logger:
-	URL: %s
-	Method: %s
-	Request Body:%v
-	Response Body:%v
-`,
-				urlPath.String(),
-				string(method),
-				jsonData,
-				result)
-		}
 	}
 
 	return errDo
