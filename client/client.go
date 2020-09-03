@@ -1508,12 +1508,12 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 	URL: %s
 	Method: %s
 	Request Body:%v
-	Response Body:%s
+	Response Body:%v
 `,
 				urlPath.String(),
 				string(method),
 				jsonData,
-				response)
+				result)
 		}
 	}
 
