@@ -327,7 +327,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			return errDo
 		}
 
-		if method == GET {
+		if method == POST {
 			fmt.Printf(`Endpoint Logger:
 	URL: %s
 	Method: %s
