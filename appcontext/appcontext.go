@@ -86,6 +86,9 @@ const (
 
 	// KeyLocationCode represents the value of location code
 	KeyLocationCode contextKey = "KeyLocationCode"
+
+	// KeyLocationCode represents the value of location code
+	KeyLogisticID contextKey = "KeyLogisticID"
 )
 
 // Owner gets the data owner from the context
@@ -374,4 +377,14 @@ func CurrentCustomerAndType(ctx *context.Context) (int, types.TypeContext) {
 		return v, types.CUSTOMER
 	}
 	return 0, types.SYSTEM
+}
+
+// LogisticID gets current prefered logistic id
+func LogisticID(ctx *context.Context) int {
+	logisticID := (*ctx).Value(KeyLogisticID)
+	if logisticID != nil {
+		v := logisticID.(int)
+		return v
+	}
+	return 0
 }
