@@ -87,7 +87,7 @@ const (
 	// KeyLocationCode represents the value of location code
 	KeyLocationCode contextKey = "KeyLocationCode"
 
-	// KeyLocationCode represents the value of location code
+	// KeyLogisticID represents the value of logistic id
 	KeyLogisticID contextKey = "KeyLogisticID"
 )
 
