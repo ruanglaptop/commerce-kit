@@ -34,11 +34,16 @@ const (
 
 // ResponseError represents struct of Authorization Type
 type ResponseError struct {
+	// General Error Response
 	Code       string         `json:"code"`
 	Message    string         `json:"message"`
 	Fields     types.Metadata `json:"-"`
 	StatusCode int            `json:"statusCode"`
 	Error      error          `json:"error"`
+
+	// Error Response for Anteraja
+	Status int    `json:"status"`
+	Info   string `json:"info"`
 }
 
 // AuthorizationTypeStruct represents struct of Authorization Type
@@ -188,6 +193,12 @@ func (c *HTTPClient) Do(req *http.Request) (string, *ResponseError) {
 		err = json.Unmarshal([]byte(string(resBody)), errResponse)
 		if err != nil {
 			errResponse.Error = err
+		}
+		if errResponse.Info != "" {
+			errResponse.Message = errResponse.Info
+		}
+		if errResponse.Status != 0 {
+			errResponse.StatusCode = errResponse.Status
 		}
 		errResponse.Error = fmt.Errorf("Error while calling %s: %v", req.URL.String(), errResponse.Message)
 
