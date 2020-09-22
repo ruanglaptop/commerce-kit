@@ -375,6 +375,11 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		return errDo
 	}
 
+	cachingKey := urlPath.String()
+	if method != GET {
+		cachingKey = cachingKey + string(jsonData)
+	}
+
 	for _, authorizationType := range c.AuthorizationTypes {
 		if authorizationType.HeaderType != "APIKey" {
 			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
@@ -424,6 +429,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 	isError := false
 	response, errDo = c.Do(req)
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		cachingKey := urlPath.String()
 		if method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
@@ -440,14 +446,14 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 
 		// collect cache
 		clientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
-			URL:      urlPath.String(),
+			URL:      cachingKey,
 			Method:   string(method),
 			IsActive: true,
 		})
 		if errClientCache != nil {
 			fmt.Printf("\nFailed to GetClientCacheByURL while collecting caching: %v", errClientCache)
 			fmt.Printf("\n\tParams: %#v", GetClientCacheByURLParams{
-				URL:      urlPath.String(),
+				URL:      cachingKey,
 				Method:   string(method),
 				IsActive: false,
 			})
@@ -478,7 +484,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		// do caching
 		isExist := true
 		currentClientCache, errClientCache := c.clientCacheService.GetClientCacheByURL(ctx, &GetClientCacheByURLParams{
-			URL:      urlPath.String(),
+			URL:      cachingKey,
 			Method:   string(method),
 			IsActive: false,
 		})
@@ -528,7 +534,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			}
 
 			_, errClientCache = c.clientCacheService.CreateClientCache(ctx, &CreateClientCacheParams{
-				URL:          urlPath.String(),
+				URL:          cachingKey,
 				Method:       string(method),
 				ClientID:     clientID,
 				ClientName:   c.ClientName,
