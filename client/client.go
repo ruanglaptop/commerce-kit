@@ -1281,19 +1281,17 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 	}
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
-	if method != GET {
-		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
-			ClientID:       clientID,
-			ClientType:     clientType,
-			Method:         string(method),
-			URL:            urlPath.String(),
-			Header:         fmt.Sprintf("%v", req.Header),
-			Request:        requestRaw,
-			Status:         "calling",
-			HTTPStatusCode: 0,
-			ReferenceID:    requestReferenceID,
-		})
-	}
+	clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+		ClientID:       clientID,
+		ClientType:     clientType,
+		Method:         string(method),
+		URL:            urlPath.String(),
+		Header:         fmt.Sprintf("%v", req.Header),
+		Request:        requestRaw,
+		Status:         "calling",
+		HTTPStatusCode: 0,
+		ReferenceID:    requestReferenceID,
+	})
 
 	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
 	if errClientCache != nil {
@@ -1351,11 +1349,9 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 		return string(resBody), errResponse
 	})()
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
-		if method != GET {
-			clientRequestLog.HTTPStatusCode = errDo.StatusCode
-			clientRequestLog.Status = "failed"
-			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
-		}
+		clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		clientRequestLog.Status = "failed"
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		// Do check cache
 		isError = true
@@ -1474,35 +1470,33 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 	var transactionID TransactionID
 	json.Unmarshal([]byte(response), &transactionID)
 
-	if method != GET {
-		clientRequestLog.TransactionID = transactionID.ID
-		if errDo != nil {
-			clientRequestLog.HTTPStatusCode = errDo.StatusCode
-		}
-		clientRequestLog.Status = "success"
-		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+	clientRequestLog.TransactionID = transactionID.ID
+	if errDo != nil {
+		clientRequestLog.HTTPStatusCode = errDo.StatusCode
+	}
+	clientRequestLog.Status = "success"
+	clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
-		requestStatus := appcontext.RequestStatus(ctx)
-		if requestStatus == nil && isAcknowledgeNeeded {
-			currentClientRequests := []*ClientRequest{}
-			temp := appcontext.ClientRequests(ctx)
-			if temp != nil {
-				currentClientRequests = temp.([]*ClientRequest)
-			}
-			currentClientRequests = append(currentClientRequests, &ClientRequest{
-				Client:  c,
-				Request: clientRequestLog,
-			})
-			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
-			// ignore when error occurs
-			_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
-				RequestID:          clientRequestLog.ID,
-				CommitStatus:       "on_progress",
-				ReservedHolder:     requestRaw,
-				ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
-				Message:            "",
-			})
+	requestStatus := appcontext.RequestStatus(ctx)
+	if requestStatus == nil && isAcknowledgeNeeded {
+		currentClientRequests := []*ClientRequest{}
+		temp := appcontext.ClientRequests(ctx)
+		if temp != nil {
+			currentClientRequests = temp.([]*ClientRequest)
 		}
+		currentClientRequests = append(currentClientRequests, &ClientRequest{
+			Client:  c,
+			Request: clientRequestLog,
+		})
+		*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
+		// ignore when error occurs
+		_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
+			RequestID:          clientRequestLog.ID,
+			CommitStatus:       "on_progress",
+			ReservedHolder:     requestRaw,
+			ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
+			Message:            "",
+		})
 	}
 
 	if response != "" && result != nil {
