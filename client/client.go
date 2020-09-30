@@ -1093,19 +1093,17 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
-	if method != GET {
-		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
-			ClientID:       clientID,
-			ClientType:     clientType,
-			Method:         string(method),
-			URL:            urlPath.String(),
-			Header:         fmt.Sprintf("%v", req.Header),
-			Request:        requestRaw,
-			Status:         "calling",
-			HTTPStatusCode: 0,
-			ReferenceID:    requestReferenceID,
-		})
-	}
+	clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+		ClientID:       clientID,
+		ClientType:     clientType,
+		Method:         string(method),
+		URL:            urlPath.String(),
+		Header:         fmt.Sprintf("%v", req.Header),
+		Request:        requestRaw,
+		Status:         "calling",
+		HTTPStatusCode: 0,
+		ReferenceID:    requestReferenceID,
+	})
 
 	response, errDo := (func() (string, *ResponseError) {
 		var res *http.Response
@@ -1151,17 +1149,16 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		if res.StatusCode < 200 || res.StatusCode >= 300 {
 			errResponse.Message = string(resBody)
 			errResponse.Error = errors.New(string(resBody))
+
 			return "", errResponse
 		}
 
 		return string(resBody), errResponse
 	})()
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
-		if method != GET {
-			clientRequestLog.HTTPStatusCode = errDo.StatusCode
-			clientRequestLog.Status = "failed"
-			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
-		}
+		clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		clientRequestLog.Status = "failed"
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		return errDo
 	}
@@ -1172,35 +1169,33 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	var transactionID TransactionID
 	json.Unmarshal([]byte(response), &transactionID)
 
-	if method != GET {
-		clientRequestLog.TransactionID = transactionID.ID
-		if errDo != nil {
-			clientRequestLog.HTTPStatusCode = errDo.StatusCode
-		}
-		clientRequestLog.Status = "success"
-		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+	clientRequestLog.TransactionID = transactionID.ID
+	if errDo != nil {
+		clientRequestLog.HTTPStatusCode = errDo.StatusCode
+	}
+	clientRequestLog.Status = "success"
+	clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
-		requestStatus := appcontext.RequestStatus(ctx)
-		if requestStatus == nil && isAcknowledgeNeeded {
-			currentClientRequests := []*ClientRequest{}
-			temp := appcontext.ClientRequests(ctx)
-			if temp != nil {
-				currentClientRequests = temp.([]*ClientRequest)
-			}
-			currentClientRequests = append(currentClientRequests, &ClientRequest{
-				Client:  c,
-				Request: clientRequestLog,
-			})
-			*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
-			// ignore when error occurs
-			_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
-				RequestID:          clientRequestLog.ID,
-				CommitStatus:       "on_progress",
-				ReservedHolder:     requestRaw,
-				ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
-				Message:            "",
-			})
+	requestStatus := appcontext.RequestStatus(ctx)
+	if requestStatus == nil && isAcknowledgeNeeded {
+		currentClientRequests := []*ClientRequest{}
+		temp := appcontext.ClientRequests(ctx)
+		if temp != nil {
+			currentClientRequests = temp.([]*ClientRequest)
 		}
+		currentClientRequests = append(currentClientRequests, &ClientRequest{
+			Client:  c,
+			Request: clientRequestLog,
+		})
+		*ctx = context.WithValue(*ctx, appcontext.KeyClientRequests, currentClientRequests)
+		// ignore when error occurs
+		_ = c.acknowledgeRequestService.Create(&backgroundContext, &AcknowledgeRequest{
+			RequestID:          clientRequestLog.ID,
+			CommitStatus:       "on_progress",
+			ReservedHolder:     requestRaw,
+			ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
+			Message:            "",
+		})
 	}
 
 	if response != "" && result != nil {
@@ -1216,7 +1211,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	return errDo
 }
 
-// CallClientWithCustomizedError do call client with customized error
+// CallClientWithCustomizedErrorAndCaching do call client with customized error and caching
 func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Context, path string, method Method, queryParams interface{}, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
