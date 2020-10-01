@@ -1145,6 +1145,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 			Fields:     nil,
 			StatusCode: res.StatusCode,
 			Error:      nil,
+			Status:     res.StatusCode,
 		}
 		if res.StatusCode < 200 || res.StatusCode >= 300 {
 			errResponse.Message = string(resBody)
@@ -1173,7 +1174,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		clientRequestLog.TransactionID = transactionID.ID
 	}
 	if errDo != nil {
-		clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		clientRequestLog.HTTPStatusCode = errDo.Status
 	}
 	clientRequestLog.Status = "success"
 	clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
