@@ -1169,7 +1169,9 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	var transactionID TransactionID
 	json.Unmarshal([]byte(response), &transactionID)
 
-	clientRequestLog.TransactionID = transactionID.ID
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+	}
 	if errDo != nil {
 		clientRequestLog.HTTPStatusCode = errDo.StatusCode
 	}
@@ -1470,7 +1472,9 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 	var transactionID TransactionID
 	json.Unmarshal([]byte(response), &transactionID)
 
-	clientRequestLog.TransactionID = transactionID.ID
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+	}
 	if errDo != nil {
 		clientRequestLog.HTTPStatusCode = errDo.StatusCode
 	}
