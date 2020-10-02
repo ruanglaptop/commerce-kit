@@ -300,7 +300,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	json.Unmarshal([]byte(response), &transactionID)
 
 	if method != GET {
-		clientRequestLog.TransactionID = transactionID.ID
+		// clientRequestLog.TransactionID = transactionID.ID
 		if errDo != nil {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		}
