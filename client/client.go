@@ -87,7 +87,7 @@ type GenericHTTPClient interface {
 	CallClient(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCaching(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCachingInRedis(ctx *context.Context, durationInSecond int, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
-	CallClientWithCachingInRedisTemp(ctx *context.Context, durationInSecond int, path string, pathToBeStored string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithCachingInRedisWithDifferentKey(ctx *context.Context, durationInSecond int, path string, pathToBeStoredAsKey string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCircuitBreaker(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithoutLog(ctx *context.Context, path string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithBaseURLGiven(ctx *context.Context, url string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
@@ -288,6 +288,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		if method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
+			clientRequestLog.Response = response
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
 		return errDo
@@ -300,11 +301,12 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 	json.Unmarshal([]byte(response), &transactionID)
 
 	if method != GET {
-		// clientRequestLog.TransactionID = transactionID.ID
+		clientRequestLog.TransactionID = transactionID.ID
 		if errDo != nil {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		}
 		clientRequestLog.Status = "success"
+		clientRequestLog.Response = response
 		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		requestStatus := appcontext.RequestStatus(ctx)
@@ -434,6 +436,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		if method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
+			clientRequestLog.Response = response
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
 
@@ -560,6 +563,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		}
 		clientRequestLog.Status = "success"
+		clientRequestLog.Response = response
 		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		requestStatus := appcontext.RequestStatus(ctx)
@@ -706,6 +710,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 		if method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
+			clientRequestLog.Response = response
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
 		return errDo
@@ -723,6 +728,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		}
 		clientRequestLog.Status = "success"
+		clientRequestLog.Response = response
 		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		requestStatus := appcontext.RequestStatus(ctx)
@@ -775,8 +781,8 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 	return errDo
 }
 
-// CallClientWithCachingInRedisTemp call client with caching in redis temp
-func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, durationInSecond int, path string, pathToBeStored string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
+// CallClientWithCachingInRedisWithDifferentKey call client with caching in redis with different key
+func (c *HTTPClient) CallClientWithCachingInRedisWithDifferentKey(ctx *context.Context, durationInSecond int, path string, pathToBeStoredAsKey string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError {
 	var jsonData []byte
 	var err error
 	var response string
@@ -800,7 +806,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, dura
 		return errDo
 	}
 
-	urlPathToBeStored, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, pathToBeStored))
+	urlPathToBeStored, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, pathToBeStoredAsKey))
 	if err != nil {
 		errDo = &ResponseError{
 			Error: err,
@@ -813,7 +819,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, dura
 	if errRedis != nil {
 		log.Printf(`
 		======================================================================
-		Error Collecting Caching in "CallClientWithCachingInRedisTemp":
+		Error Collecting Caching in "CallClientWithCachingInRedisWithDifferentKey":
 		"key": %s
 		Error: %v
 		======================================================================
@@ -825,7 +831,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, dura
 		if errJSON := json.Unmarshal([]byte(val), &result); errJSON != nil {
 			log.Printf(`
 			======================================================================
-			Error Collecting Caching in "CallClientWithCachingInRedisTemp":
+			Error Collecting Caching in "CallClientWithCachingInRedisWithDifferentKey":
 			"key": %s,
 			Error: %v,
 			======================================================================
@@ -891,6 +897,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, dura
 		if method != GET {
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			clientRequestLog.Status = "failed"
+			clientRequestLog.Response = response
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 		}
 		return errDo
@@ -908,6 +915,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, dura
 			clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		}
 		clientRequestLog.Status = "success"
+		clientRequestLog.Response = response
 		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		requestStatus := appcontext.RequestStatus(ctx)
@@ -949,7 +957,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisTemp(ctx *context.Context, dura
 		).Err(); err != nil {
 			log.Printf(`
 			======================================================================
-			Error Storing Caching in "CallClientWithCachingInRedisTemp":
+			Error Storing Caching in "CallClientWithCachingInRedisWithDifferentKey":
 			"key": %s,
 			Error: %v,
 			======================================================================
@@ -1041,6 +1049,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 			if method != GET {
 				clientRequestLog.HTTPStatusCode = errDo.StatusCode
 				clientRequestLog.Status = "failed"
+				clientRequestLog.Response = response
 				clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 			}
 
@@ -1059,6 +1068,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 				clientRequestLog.HTTPStatusCode = errDo.StatusCode
 			}
 			clientRequestLog.Status = "success"
+			clientRequestLog.Response = response
 			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 			requestStatus := appcontext.RequestStatus(ctx)
@@ -1344,6 +1354,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
 		clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		clientRequestLog.Status = "failed"
+		clientRequestLog.Response = response
 		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		return errDo
@@ -1357,6 +1368,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 
 	if method != GET {
 		clientRequestLog.TransactionID = transactionID.ID
+		clientRequestLog.Response = response
 	}
 	if errDo != nil {
 		clientRequestLog.HTTPStatusCode = errDo.StatusCode
@@ -1539,6 +1551,7 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
 		clientRequestLog.HTTPStatusCode = errDo.StatusCode
 		clientRequestLog.Status = "failed"
+		clientRequestLog.Response = response
 		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 
 		// Do check cache
@@ -1660,6 +1673,7 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 
 	if method != GET {
 		clientRequestLog.TransactionID = transactionID.ID
+		clientRequestLog.Response = response
 	}
 	if errDo != nil {
 		clientRequestLog.HTTPStatusCode = errDo.StatusCode
