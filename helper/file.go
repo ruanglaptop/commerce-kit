@@ -7,7 +7,7 @@ import (
 )
 
 // AppendToFile append text to file after new line
-func AppendToFile(fileName string, text string) error {
+func AppendToFile(fileName string, newText string) error {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -28,7 +28,7 @@ func AppendToFile(fileName string, text string) error {
 			newMessages = newMessages + "\n"
 		}
 	}
-	newMessages = newMessages + text
+	newMessages = newMessages + newText
 
 	file.Close()
 
@@ -41,11 +41,13 @@ func AppendToFile(fileName string, text string) error {
 	logger := log.New(file, "", 0)
 	logger.Output(2, newMessages)
 	file.Close()
+
+	return nil
 }
 
 // WriteToFile write text to file
 func WriteToFile(fileName string, text string) error {
-	file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
@@ -54,13 +56,15 @@ func WriteToFile(fileName string, text string) error {
 	logger := log.New(file, "", 0)
 	logger.Output(2, text)
 	file.Close()
+
+	return nil
 }
 
 // ReadFromFile read text to file return array of string (array represent the line number in file)
 func ReadFromFile(fileName string) ([]string, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
@@ -74,5 +78,5 @@ func ReadFromFile(fileName string) ([]string, error) {
 
 	file.Close()
 
-	return text
+	return text, nil
 }
