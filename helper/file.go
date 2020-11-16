@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"strings"
 )
 
 // AppendToFile append text to file after new line
@@ -22,13 +23,7 @@ func AppendToFile(fileName string, newText string) error {
 		text = append(text, scanner.Text())
 	}
 
-	var newMessages string
-	for idx, message := range text {
-		if idx != len(text)-1 {
-			newMessages = newMessages + "\n"
-		}
-	}
-	newMessages = newMessages + newText
+	text = append(text, newText)
 
 	file.Close()
 
@@ -39,7 +34,7 @@ func AppendToFile(fileName string, newText string) error {
 
 	// implement logger to overcome race condition issue, since log have its own mutex process
 	logger := log.New(file, "", 0)
-	logger.Output(2, newMessages)
+	logger.Output(2, strings.Join(text, "\n"))
 	file.Close()
 
 	return nil
