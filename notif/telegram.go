@@ -11,14 +11,14 @@ import (
 // TelegramNotifier telegram notifier
 type TelegramNotifier struct {
 	telegramClient client.GenericHTTPClient
-	channelName    string
+	channelID      string
 	secretToken    string
 }
 
 // Notify send message to registered username
 func (tn *TelegramNotifier) Notify(message string) error {
 	ctx := context.Background()
-	path := fmt.Sprintf(`/bot%s/sendMessage?chat_id=@%s&text=%s`, tn.secretToken, tn.channelName, message)
+	path := fmt.Sprintf(`/bot%s/sendMessage?chat_id=@%s&text=%s`, tn.secretToken, tn.channelID, message)
 	errClient := tn.telegramClient.CallClient(&ctx, path, "POST", nil, nil, false)
 	if errClient != nil {
 		errString := fmt.Sprintf("Error on notify to Telegram: %v", errClient)
@@ -36,12 +36,12 @@ func (tn *TelegramNotifier) Send(ctx context.Context, data interface{}) error {
 // NewTelegramNotifier create new telegram notifier
 func NewTelegramNotifier(
 	telegramClient client.GenericHTTPClient,
-	channelName string,
+	channelID string,
 	secretToken string,
 ) *TelegramNotifier {
 	return &TelegramNotifier{
 		telegramClient: telegramClient,
-		channelName:    channelName,
+		channelID:      channelID,
 		secretToken:    secretToken,
 	}
 }
