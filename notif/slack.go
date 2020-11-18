@@ -2,6 +2,8 @@ package notif
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -67,6 +69,11 @@ func (sn *SlackNotifier) Notify(message string) error {
 		return err
 	}
 	return nil
+}
+
+// Send send function are not implemented on this medium
+func (sn *SlackNotifier) Send(ctx context.Context, data interface{}) error {
+	return errors.New("send function are not implemented on Slack")
 }
 
 // NewSlackNotifier creates a new slack notifier
