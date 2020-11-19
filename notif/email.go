@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/payfazz/messenger/internal/provider/mail/ses"
-	"github.com/payfazz/messenger/internal/provider/sender"
+	"github.com/payfazz/messenger/internal/sender"
 )
 
 // EmailNotifier email notifier using payfazz messenger as library
