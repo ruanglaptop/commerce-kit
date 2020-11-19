@@ -47,6 +47,7 @@ type Service struct {
 type ConfigParams struct {
 	Cloud     string
 	Bucket    string
+	Region    string
 	AccessKey string
 	SecretKey string
 	Token     string
@@ -288,7 +289,7 @@ func setupGCP(ctx *context.Context, bucket string) (*blob.Bucket, error) {
 func setupAWS(ctx *context.Context, config *ConfigParams) (*blob.Bucket, error) {
 	c := &aws.Config{
 		// Either hard-code the region or use AWS_REGION.
-		Region: aws.String("ap-southeast-1"),
+		Region: aws.String(config.Region),
 		// credentials.NewEnvCredentials assumes two environment variables are
 		// present:
 		// 1. AWS_ACCESS_KEY_ID, and
