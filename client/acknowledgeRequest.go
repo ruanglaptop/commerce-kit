@@ -105,6 +105,7 @@ func (s *AcknowledgeRequestService) Prepare(ctx *context.Context) error {
 		Request:        requestRaw,
 		Status:         "called",
 		HTTPStatusCode: 200,
+		Response:       "{}",
 	})
 	*ctx = context.WithValue(*ctx, appcontext.KeyRequestReferenceID, result.ID)
 
