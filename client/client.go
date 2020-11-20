@@ -261,7 +261,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		}
 	}
 
-	var clientRequestLog *ClientRequestLog
+	clientRequestLog := &ClientRequestLog{}
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -280,6 +280,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			Status:         "calling",
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
+			Response:       "{}",
 		})
 	}
 
@@ -402,7 +403,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		}
 	}
 
-	var clientRequestLog *ClientRequestLog
+	clientRequestLog := &ClientRequestLog{}
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -421,6 +422,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			Status:         "calling",
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
+			Response:       "{}",
 		})
 	}
 
@@ -683,7 +685,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 		}
 	}
 
-	var clientRequestLog *ClientRequestLog
+	clientRequestLog := &ClientRequestLog{}
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -702,6 +704,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 			Status:         "calling",
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
+			Response:       "{}",
 		})
 	}
 
@@ -870,7 +873,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisWithDifferentKey(ctx *context.C
 		}
 	}
 
-	var clientRequestLog *ClientRequestLog
+	clientRequestLog := &ClientRequestLog{}
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -889,6 +892,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisWithDifferentKey(ctx *context.C
 			Status:         "calling",
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
+			Response:       "{}",
 		})
 	}
 
@@ -1022,7 +1026,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 			}
 		}
 
-		var clientRequestLog *ClientRequestLog
+		clientRequestLog := &ClientRequestLog{}
 		tempCurrentAccount := appcontext.CurrentAccount(ctx)
 		if tempCurrentAccount == nil {
 			defaultValue := 0
@@ -1041,6 +1045,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 				Status:         "calling",
 				HTTPStatusCode: 0,
 				ReferenceID:    requestReferenceID,
+				Response:       "{}",
 			})
 		}
 
@@ -1280,7 +1285,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		}
 	}
 
-	var clientRequestLog *ClientRequestLog
+	clientRequestLog := &ClientRequestLog{}
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -1299,6 +1304,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		Status:         "calling",
 		HTTPStatusCode: 0,
 		ReferenceID:    requestReferenceID,
+		Response:       "{}",
 	})
 
 	response, errDo := (func() (string, *ResponseError) {
@@ -1473,7 +1479,7 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 		}
 	}
 
-	var clientRequestLog *ClientRequestLog
+	clientRequestLog := &ClientRequestLog{}
 	tempCurrentAccount := appcontext.CurrentAccount(ctx)
 	if tempCurrentAccount == nil {
 		defaultValue := 0
@@ -1491,6 +1497,7 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 		Status:         "calling",
 		HTTPStatusCode: 0,
 		ReferenceID:    requestReferenceID,
+		Response:       "{}",
 	})
 
 	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))
