@@ -1,0 +1,49 @@
+package helper
+
+import (
+	"context"
+	"fmt"
+	"log"
+
+	"github.com/payfazz/commerce-kit/types"
+
+	"gocloud.dev/pubsub"
+)
+
+// PublishEventWithMirroringInFile publish event with mirroring in file
+func PublishEventWithMirroringInFile(ctx *context.Context, pubsubTopic *pubsub.Topic, topicName string, body []byte, metadata map[string]string, callerFunction string, backupFileName string) *types.Error {
+	errPubsub := pubsubTopic.Send(
+		*ctx, &pubsub.Message{
+			Body:     body,
+			Metadata: metadata,
+		},
+	)
+	if errPubsub != nil {
+		log.Printf("[PUBSUB] Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
+			Path:    "." + callerFunction + ".PublishEvent()",
+			Message: errPubsub.Error(),
+			Error:   errPubsub,
+			Type:    "pubsub-error",
+		})
+
+		log.Println("\nContinue write event to file ...")
+
+		var message string
+		for _, value := range metadata {
+			message = message + value + "-"
+		}
+		message = message + fmt.Sprintf("%v", body)
+
+		errFileHandler := AppendToFile(backupFileName, message)
+		if errFileHandler != nil {
+			return &types.Error{
+				Path:    ".PublishEvent()",
+				Message: errFileHandler.Error(),
+				Error:   errFileHandler,
+				Type:    "fileHandler-error",
+			}
+		}
+	}
+
+	return nil
+}
