@@ -9,7 +9,7 @@ import (
 
 // AppendToFile append text to file after new line
 func AppendToFile(fileName string, newText string) error {
-	file, err := os.Open(fileName)
+	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func WriteToFile(fileName string, text string) error {
 
 // ReadFromFile read text to file return array of string (array represent the line number in file)
 func ReadFromFile(fileName string) ([]string, error) {
-	file, err := os.Open(fileName)
+	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
