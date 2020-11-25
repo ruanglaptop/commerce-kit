@@ -14,6 +14,7 @@ import (
 // PublishEventWithMirroringInFile publish event with mirroring in file
 func PublishEventWithMirroringInFile(ctx *context.Context, pubsubTopics map[string]*pubsub.Topic, topicNames []string, body []byte, metadata map[string]string, callerFunction string, backupFileName string, notifier notif.Notifier) *types.Error {
 	for _, topicName := range topicNames {
+		metadata["action"] = topicName
 		errPubsub := pubsubTopics[topicName].Send(
 			*ctx, &pubsub.Message{
 				Body:     body,
