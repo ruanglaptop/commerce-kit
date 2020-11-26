@@ -12,6 +12,9 @@ import (
 
 // ConsumeEventFromFile consume event from file with return idempotentId, object, and event bytes
 func ConsumeEventFromFile(fileName string, topic string, notifier notif.Notifier) (string, string, []byte) {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Printf("[ConsumeEventFromFile] Error while readEventFromFile: %v", err)
@@ -40,6 +43,9 @@ func ConsumeEventFromFile(fileName string, topic string, notifier notif.Notifier
 
 // IsEventExistInFile check whether the event is exist in file
 func IsEventExistInFile(fileName string, topic string, idempotentID string, notifier notif.Notifier) bool {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Printf("[IsEventExistInFile] Error while readEventFromFile: %v", err)
@@ -68,6 +74,9 @@ func IsEventExistInFile(fileName string, topic string, idempotentID string, noti
 
 // AcknowledgeEventFromFile acknowledge / remove event from file by idempotentId
 func AcknowledgeEventFromFile(fileName string, topic string, idempotentID string, notifier notif.Notifier) {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	file, err := os.Open(fileName)
 	if err != nil {
 		log.Printf("Error while AcknowledgeEventFromFile: %v", err)
@@ -85,21 +94,31 @@ func AcknowledgeEventFromFile(fileName string, topic string, idempotentID string
 	}
 
 	var newMessages string
+	distinctFlagMap := map[string]map[string]bool{}
 	for idx, message := range text {
 		chunk := strings.Split(message, "-")
 		if len(chunk) > 3 {
-			if chunk[0] != idempotentID || chunk[1] != topic {
-				newMessages = newMessages + fmt.Sprintf("%s-%s-%s-%v", chunk[0], chunk[1], chunk[2], chunk[3])
+			if distinctFlagMap[chunk[0]] == nil {
+				distinctFlagMap[chunk[0]] = map[string]bool{}
 			}
-			if idx != len(text)-1 {
-				newMessages = newMessages + "\n"
+
+			if distinctFlagMap[chunk[0]][chunk[1]] == false {
+				distinctFlagMap[chunk[0]][chunk[1]] = true
+
+				if chunk[0] != idempotentID || chunk[1] != topic {
+					newMessages = newMessages + fmt.Sprintf("%s-%s-%s-%v", chunk[0], chunk[1], chunk[2], chunk[3])
+				}
+				if idx != len(text)-1 {
+					newMessages = newMessages + "\n"
+				}
 			}
 		}
 	}
 
 	file.Close()
+	os.Remove(fileName)
 
-	file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err = os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Printf("Error while AcknowledgeEventFromFile on writing event to file: %v", err)
 		notifier.Notify(fmt.Sprintf("[AcknowledgeEventFromFile] Error while AcknowledgeEventFromFile on writing event to file: %v", err))
