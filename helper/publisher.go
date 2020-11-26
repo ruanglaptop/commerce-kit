@@ -15,6 +15,22 @@ import (
 func PublishEventWithMirroringInFile(ctx *context.Context, pubsubTopics map[string]*pubsub.Topic, topicNames []string, body []byte, metadata map[string]string, callerFunction string, backupFileName string, notifier notif.Notifier) *types.Error {
 	for _, topicName := range topicNames {
 		metadata["action"] = topicName
+
+		message := fmt.Sprintf("%s-%s-%s-%v", metadata["idempotentId"], metadata["action"], metadata["object"], body)
+
+		errFileHandler := AppendToFile(backupFileName, message)
+		if errFileHandler != nil {
+			errNotification := notifier.Notify(fmt.Sprintf("[PublishEventWithMirroringInFile] Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
+				Path:    ".PublishEvent()",
+				Message: errFileHandler.Error(),
+				Error:   errFileHandler,
+				Type:    "fileHandler-error",
+			}))
+			if errNotification != nil {
+				log.Println(errNotification)
+			}
+		}
+
 		errPubsub := pubsubTopics[topicName].Send(
 			*ctx, &pubsub.Message{
 				Body:     body,
@@ -28,36 +44,37 @@ func PublishEventWithMirroringInFile(ctx *context.Context, pubsubTopics map[stri
 				Error:   errPubsub,
 				Type:    "pubsub-error",
 			})
-			notifier.Notify(fmt.Sprintf("[PublishEventWithMirroringInFile] Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
+
+			errNotification := notifier.Notify(fmt.Sprintf("[PublishEventWithMirroringInFile] Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
 				Path:    "." + callerFunction + ".PublishEvent()",
 				Message: errPubsub.Error(),
 				Error:   errPubsub,
 				Type:    "pubsub-error",
 			}))
-
-			log.Println("\nContinue write event to file ...")
-
-			var message string
-			for _, value := range metadata {
-				message = message + value + "-"
+			if errNotification != nil {
+				log.Println(errNotification)
 			}
-			message = message + fmt.Sprintf("%v", body)
 
-			errFileHandler := AppendToFile(backupFileName, message)
 			if errFileHandler != nil {
 				return &types.Error{
-					Path:    ".PublishEvent()",
-					Message: errFileHandler.Error(),
-					Error:   errFileHandler,
-					Type:    "fileHandler-error",
+					Path: ".PublishEvent()",
+					Message: fmt.Sprintf(`
+						Error on publishing event:
+						errFileHandler: %v
+						errPubsub: %v
+						`,
+						errFileHandler.Error(),
+						errPubsub.Error(),
+					),
+					Error: fmt.Errorf(`
+						Error on publishing event:
+						errFileHandler: %v
+						errPubsub: %v
+					`, errFileHandler.Error(),
+						errPubsub.Error(),
+					),
+					Type: "publisher-error",
 				}
-
-				notifier.Notify(fmt.Sprintf("[PublishEventWithMirroringInFile] Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
-					Path:    ".PublishEvent()",
-					Message: errFileHandler.Error(),
-					Error:   errFileHandler,
-					Type:    "fileHandler-error",
-				}))
 			}
 		}
 	}
