@@ -20,6 +20,13 @@ func PublishEventWithMirroringInFile(ctx *context.Context, pubsubTopics map[stri
 
 		errFileHandler := AppendToFile(backupFileName, message)
 		if errFileHandler != nil {
+			log.Printf("[PublishEventWithMirroringInFile] Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
+				Path:    ".PublishEvent()",
+				Message: errFileHandler.Error(),
+				Error:   errFileHandler,
+				Type:    "fileHandler-error",
+			})
+
 			errNotification := notifier.Notify(fmt.Sprintf("[PublishEventWithMirroringInFile] Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
 				Path:    ".PublishEvent()",
 				Message: errFileHandler.Error(),
