@@ -20,7 +20,7 @@ func (tn *TelegramNotifier) Notify(message string) error {
 	ctx := context.Background()
 	path := fmt.Sprintf(`bot%s/sendMessage?chat_id=%s&text=%s`, tn.secretToken, tn.channelID, message)
 	errClient := tn.telegramClient.CallClient(&ctx, path, "POST", nil, nil, false)
-	if errClient != nil {
+	if errClient != nil && errClient.Error != nil {
 		errString := fmt.Sprintf("Error on notify to Telegram: %v", errClient)
 		return errors.New(errString)
 	}
