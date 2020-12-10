@@ -2,6 +2,7 @@ package helper
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -11,6 +12,9 @@ import (
 func AppendToFile(fileName string, newText string) error {
 	fileMutex.Lock()
 	defer fileMutex.Unlock()
+
+	workdir, _ := os.Getwd()
+	fmt.Printf("%v", workdir)
 
 	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
