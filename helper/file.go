@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -14,6 +15,17 @@ func AppendToFile(fileName string, newText string) error {
 
 	workdir, _ := os.Getwd()
 	log.Printf("\nWork Dir: %v\n", workdir)
+	err := filepath.Walk(".",
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			log.Println(path, info.Size())
+			return nil
+		})
+	if err != nil {
+		log.Println(err)
+	}
 
 	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
