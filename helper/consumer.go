@@ -107,9 +107,9 @@ func AcknowledgeEventFromFile(fileName string, topic string, idempotentID string
 
 				if chunk[0] != idempotentID || chunk[1] != topic {
 					newMessages = newMessages + fmt.Sprintf("%s-%s-%s-%v", chunk[0], chunk[1], chunk[2], chunk[3])
-				}
-				if idx != len(text)-1 {
-					newMessages = newMessages + "\n"
+					if idx != len(text)-1 {
+						newMessages = newMessages + "\n"
+					}
 				}
 			}
 		}
