@@ -70,6 +70,9 @@ func AppendToFile(fileName string, newText string) error {
 
 // WriteToFile write text to file
 func WriteToFile(fileName string, text string) error {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	file, err := os.OpenFile(fileName, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -85,6 +88,9 @@ func WriteToFile(fileName string, text string) error {
 
 // ReadFromFile read text to file return array of string (array represent the line number in file)
 func ReadFromFile(fileName string) ([]string, error) {
+	fileMutex.Lock()
+	defer fileMutex.Unlock()
+
 	file, err := os.OpenFile(fileName, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
