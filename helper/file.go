@@ -44,6 +44,17 @@ func AppendToFile(fileName string, newText string) error {
 
 	file.Close()
 
+	isExist := false
+	for _, line := range text {
+		if newText == line {
+			isExist = true
+		}
+	}
+
+	if isExist {
+		return nil
+	}
+
 	file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
