@@ -40,10 +40,6 @@ func AppendToFile(fileName string, newText string) error {
 		text = append(text, scanner.Text())
 	}
 
-	text = append(text, newText)
-
-	file.Close()
-
 	isExist := false
 	for _, line := range text {
 		if newText == line {
@@ -54,6 +50,10 @@ func AppendToFile(fileName string, newText string) error {
 	if isExist {
 		return nil
 	}
+
+	text = append(text, newText)
+
+	file.Close()
 
 	file, err = os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
