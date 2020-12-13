@@ -7,7 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"github.com/payfazz/commerce-kit/helper"
@@ -133,14 +133,14 @@ func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *h
 	projection := expression.NamesList(expression.Name("serviceName"), expression.Name("topicName"), expression.Name("idempotentId"), expression.Name("object"), expression.Name("message"))
 	expression, err := expression.NewBuilder().WithFilter(filter).WithProjection(projection).Build()
 	if err != nil {
-		log.Printf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error building expression): %v", topicName, &types.Error{
+		log.Printf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error building expression): %v", event.TopicName, &types.Error{
 			Path:    ".EventMirroringToDynamoDBService->Consume()",
 			Message: err.Error(),
 			Error:   err,
 			Type:    "eventMirroringService-error",
 		})
 
-		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error building expression): %v", topicName, &types.Error{
+		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error building expression): %v", event.TopicName, &types.Error{
 			Path:    ".EventMirroringToDynamoDBService->Consume()",
 			Message: err.Error(),
 			Error:   err,
@@ -163,14 +163,14 @@ func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *h
 
 	result, err := s.dynamoDB.Scan(params)
 	if err != nil {
-		log.Printf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Query API call failed): %v", topicName, &types.Error{
+		log.Printf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Query API call failed): %v", event.TopicName, &types.Error{
 			Path:    ".EventMirroringToDynamoDBService->Consume()",
 			Message: err.Error(),
 			Error:   err,
 			Type:    "eventMirroringService-error",
 		})
 
-		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Query API call failed): %v", topicName, &types.Error{
+		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Query API call failed): %v", event.TopicName, &types.Error{
 			Path:    ".EventMirroringToDynamoDBService->Consume()",
 			Message: err.Error(),
 			Error:   err,
@@ -189,14 +189,14 @@ func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *h
 		err = dynamodbattribute.UnmarshalMap(i, &eventResult)
 		if err != nil {
 			fmt.Println("Got error unmarshalling:")
-			log.Printf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error unmarshalling): %v", topicName, &types.Error{
+			log.Printf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error unmarshalling): %v", event.TopicName, &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Consume()",
 				Message: err.Error(),
 				Error:   err,
 				Type:    "eventMirroringService-error",
 			})
 
-			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error unmarshalling): %v", topicName, &types.Error{
+			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Consume(): Error on consuming event (Topic: %s) from dynamodb (Got error unmarshalling): %v", event.TopicName, &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Consume()",
 				Message: err.Error(),
 				Error:   err,
@@ -253,8 +253,8 @@ func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, even
 }
 
 // Publish publish event with mirroring in file
-func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, serviceName string, topicNames []string, body []byte, metadata map[string]string, callerFunction string) *types.Error {
-	metadata["serviceName"] = serviceName
+func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNames []string, body []byte, metadata map[string]string, callerFunction string) *types.Error {
+	metadata["serviceName"] = s.serviceName
 	for _, topicName := range topicNames {
 		metadata["action"] = topicName
 
