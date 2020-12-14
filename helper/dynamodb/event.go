@@ -357,18 +357,18 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 						errDynamoDB: %v - %v
 						errPubsub: %v
 						`,
-					errMarshal.Error(),
-					errInputItem.Error(),
-					errPubsub.Error(),
+					errMarshal,
+					errInputItem,
+					errPubsub,
 				),
 				Error: fmt.Errorf(`
 						Error on publishing event:
 						errDynamoDB: %v - %v
 						errPubsub: %v
 					`,
-					errMarshal.Error(),
-					errInputItem.Error(),
-					errPubsub.Error(),
+					errMarshal,
+					errInputItem,
+					errPubsub,
 				),
 				Type: "eventMirroringService-error",
 			}
