@@ -322,8 +322,8 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 
 			return &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Publish()",
-				Message: errMarshal.Error(),
-				Error:   errMarshal,
+				Message: errInputItem.Error(),
+				Error:   errInputItem,
 				Type:    "eventMirroringService-error",
 			}
 		}
