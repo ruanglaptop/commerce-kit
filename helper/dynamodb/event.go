@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
@@ -381,16 +382,24 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 func NewEventMirroringToDynamoDBService(
 	awsRegion string,
 	awsURL string,
+	awsAccessKeyID string,
+	awsSecretAccessKey string,
+	awsToken string,
 	tableName string,
 	serviceName string,
 	pubsubTopics map[string]*pubsub.Topic,
 	notifier notif.Notifier,
 ) *EventMirroringToDynamoDBService {
-	config := &aws.Config{
-		Region:   aws.String(awsRegion),
-		Endpoint: aws.String(awsURL),
-	}
-	sess := session.Must(session.NewSession(config))
+	// config := &aws.Config{
+	// 	Region:   aws.String(awsRegion),
+	// 	Endpoint: aws.String(awsURL),
+	// }
+	// sess := session.Must(session.NewSession(config))
+
+	awsSession := session.New(&aws.Config{
+		Region:      aws.String(awsRegion),
+		Credentials: credentials.NewStaticCredentials(awsAccessKeyID, awsSecretAccessKey, awsToken),
+	})
 	dynamoDB := dynamodb.New(sess)
 
 	return &EventMirroringToDynamoDBService{
