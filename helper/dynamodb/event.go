@@ -130,6 +130,7 @@ func (s *EventMirroringToDynamoDBService) Consume(ctx *context.Context, topicNam
 
 // IsExist check whether the event is exist in file
 func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *helper.Event) bool {
+	event.ServiceName = s.serviceName
 	filter := expression.Name("serviceName").Equal(expression.Value(s.serviceName))
 	projection := expression.NamesList(expression.Name("serviceName"), expression.Name("topicName"), expression.Name("idempotentId"), expression.Name("object"), expression.Name("message"))
 	expression, err := expression.NewBuilder().WithFilter(filter).WithProjection(projection).Build()
@@ -220,6 +221,7 @@ func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *h
 
 // Acknowledge acknowledge / remove event from dynamodb by idempotentId
 func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, event *helper.Event) *types.Error {
+	event.ServiceName = s.serviceName
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"serviceName": {
