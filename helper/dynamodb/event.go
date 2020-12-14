@@ -400,7 +400,7 @@ func NewEventMirroringToDynamoDBService(
 		Region:      aws.String(awsRegion),
 		Credentials: credentials.NewStaticCredentials(awsAccessKeyID, awsSecretAccessKey, awsToken),
 	})
-	dynamoDB := dynamodb.New(sess)
+	dynamoDB := dynamodb.New(awsSession)
 
 	return &EventMirroringToDynamoDBService{
 		serviceName:  serviceName,
