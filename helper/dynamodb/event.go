@@ -269,6 +269,10 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 			Message:      fmt.Sprintf("%v", body),
 		}
 
+		if s.IsExist(ctx, &event) {
+			continue
+		}
+
 		eventInfo, errMarshal := dynamodbattribute.MarshalMap(event)
 		if errMarshal != nil {
 			log.Printf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to dynamodb: %v", topicName, &types.Error{
