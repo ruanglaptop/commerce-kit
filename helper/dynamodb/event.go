@@ -26,7 +26,7 @@ type EventMirroringToDynamoDBService struct {
 	notifier     notif.Notifier
 }
 
-// Consume consume event from dynamodb with return the first event from file
+// Consume consume event from dynamodb with return the first event from dynamodb
 func (s *EventMirroringToDynamoDBService) Consume(ctx *context.Context, topicName string) (*helper.Event, *types.Error) {
 	eventResult := helper.Event{}
 	filter := expression.Name("serviceName").Equal(expression.Value(s.serviceName))
@@ -128,7 +128,7 @@ func (s *EventMirroringToDynamoDBService) Consume(ctx *context.Context, topicNam
 	return &eventResult, nil
 }
 
-// IsExist check whether the event is exist in file
+// IsExist check whether the event is exist in dynamodb
 func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *helper.Event) bool {
 	event.ServiceName = s.serviceName
 	filter := expression.Name("serviceName").Equal(expression.Value(s.serviceName))
@@ -255,7 +255,7 @@ func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, even
 	return nil
 }
 
-// Publish publish event with mirroring in file
+// Publish publish event with mirroring in dynamodb
 func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNames []string, body []byte, metadata map[string]string, callerFunction string) *types.Error {
 	metadata["serviceName"] = s.serviceName
 	for _, topicName := range topicNames {
@@ -271,14 +271,14 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 
 		eventInfo, errMarshal := dynamodbattribute.MarshalMap(event)
 		if errMarshal != nil {
-			log.Printf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
+			log.Printf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to dynamodb: %v", topicName, &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Publish()",
 				Message: errMarshal.Error(),
 				Error:   errMarshal,
 				Type:    "eventMirroringService-error",
 			})
 
-			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
+			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to dynamodb: %v", topicName, &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Publish()",
 				Message: errMarshal.Error(),
 				Error:   errMarshal,
@@ -303,14 +303,14 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 
 		_, errInputItem := s.dynamoDB.PutItem(eventInputed)
 		if errInputItem != nil {
-			log.Printf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
+			log.Printf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to dynamodb: %v", topicName, &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Publish()",
 				Message: errInputItem.Error(),
 				Error:   errInputItem,
 				Type:    "eventMirroringService-error",
 			})
 
-			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to file: %v", topicName, &types.Error{
+			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to dynamodb: %v", topicName, &types.Error{
 				Path:    ".EventMirroringToDynamoDBService->Publish()",
 				Message: errInputItem.Error(),
 				Error:   errInputItem,
