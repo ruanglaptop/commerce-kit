@@ -222,7 +222,7 @@ func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *h
 // Acknowledge acknowledge / remove event from dynamodb by idempotentId
 func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, event *helper.Event) *types.Error {
 	event.ServiceName = s.serviceName
-	eventKey := EventKey{
+	eventKey := helper.EventKey{
 		IdempotentID: event.IdempotentID,
 		TopicName:    event.TopicName,
 	}
