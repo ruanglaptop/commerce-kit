@@ -89,6 +89,9 @@ const (
 
 	// KeyLogisticID represents the value of logistic id
 	KeyLogisticID contextKey = "KeyLogisticID"
+
+	// KeyCurrentQueryModelEvents represents the current event going to be publish in query model
+	KeyCurrentQueryModelEvents contextKey = "KeyCurrentQueryModelEvents"
 )
 
 // Owner gets the data owner from the context
@@ -387,4 +390,14 @@ func LogisticID(ctx *context.Context) int {
 		return v
 	}
 	return 0
+}
+
+// CurrentQueryModelEvents gets all events to be published in query model
+func CurrentQueryModelEvents(ctx *context.Context) interface{} {
+	currentQueryModelEvents := (*ctx).Value(KeyCurrentQueryModelEvents)
+	if currentQueryModelEvents != nil {
+		v := currentQueryModelEvents.(interface{})
+		return v
+	}
+	return nil
 }

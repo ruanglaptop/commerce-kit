@@ -256,17 +256,17 @@ func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, even
 }
 
 // Publish publish event with mirroring in dynamodb
-func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNames []string, body []byte, metadata map[string]string, callerFunction string) *types.Error {
-	metadata["serviceName"] = s.serviceName
-	for _, topicName := range topicNames {
-		metadata["action"] = topicName
+func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, params *helper.PublishEventParams) *types.Error {
+	params.Metadata["serviceName"] = s.serviceName
+	for _, topicName := range params.TopicNames {
+		params.Metadata["action"] = topicName
 
 		event := helper.Event{
-			ServiceName:  metadata["serviceName"],
-			TopicName:    metadata["action"],
-			IdempotentID: metadata["idempotentId"],
-			Object:       metadata["object"],
-			Message:      fmt.Sprintf("%v", body),
+			ServiceName:  params.Metadata["serviceName"],
+			TopicName:    params.Metadata["action"],
+			IdempotentID: params.Metadata["idempotentId"],
+			Object:       params.Metadata["object"],
+			Message:      fmt.Sprintf("%v", params.Body),
 		}
 
 		if s.IsExist(ctx, &event) {
@@ -334,20 +334,20 @@ func (s *EventMirroringToDynamoDBService) Publish(ctx *context.Context, topicNam
 
 		errPubsub := s.pubsubTopics[topicName].Send(
 			*ctx, &pubsub.Message{
-				Body:     body,
-				Metadata: metadata,
+				Body:     params.Body,
+				Metadata: params.Metadata,
 			},
 		)
 		if errPubsub != nil {
 			log.Printf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
-				Path:    "." + callerFunction + ".EventMirroringToDynamoDBService->Publish()",
+				Path:    "." + params.CallerFunction + ".EventMirroringToDynamoDBService->Publish()",
 				Message: errPubsub.Error(),
 				Error:   errPubsub,
 				Type:    "eventMirroringService-error",
 			})
 
 			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
-				Path:    "." + callerFunction + ".EventMirroringToDynamoDBService->Publish()",
+				Path:    "." + params.CallerFunction + ".EventMirroringToDynamoDBService->Publish()",
 				Message: errPubsub.Error(),
 				Error:   errPubsub,
 				Type:    "eventMirroringService-error",

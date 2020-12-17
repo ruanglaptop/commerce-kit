@@ -171,12 +171,12 @@ func (s *EventMirroringToFileService) Acknowledge(ctx *context.Context, event *h
 }
 
 // Publish publish event with mirroring in file
-func (s *EventMirroringToFileService) Publish(ctx *context.Context, topicNames []string, body []byte, metadata map[string]string, callerFunction string) *types.Error {
-	metadata["serviceName"] = s.serviceName
-	for _, topicName := range topicNames {
+func (s *EventMirroringToFileService) Publish(ctx *context.Context, params *helper.PublishEventParams) *types.Error {
+	params.Metadata["serviceName"] = s.serviceName
+	for _, topicName := range params.TopicNames {
 		metadata["action"] = topicName
 
-		message := fmt.Sprintf("%s-%s-%s-%s-%v", metadata["serviceName"], metadata["action"], metadata["idempotentId"], metadata["object"], body)
+		message := fmt.Sprintf("%s-%s-%s-%s-%v", params.Metadata["serviceName"], params.Metadata["action"], params.Metadata["idempotentId"], params.Metadata["object"], params.Body)
 
 		errFileHandler := AppendToFile(s.fileName, message)
 		if errFileHandler != nil {
@@ -200,20 +200,20 @@ func (s *EventMirroringToFileService) Publish(ctx *context.Context, topicNames [
 
 		errPubsub := s.pubsubTopics[topicName].Send(
 			*ctx, &pubsub.Message{
-				Body:     body,
-				Metadata: metadata,
+				Body:     params.Body,
+				Metadata: params.Metadata,
 			},
 		)
 		if errPubsub != nil {
 			log.Printf(".EventMirroringToFileService->Publish(): Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
-				Path:    "." + callerFunction + ".EventMirroringToFileService->Publish()",
+				Path:    "." + params.CallerFunction + ".EventMirroringToFileService->Publish()",
 				Message: errPubsub.Error(),
 				Error:   errPubsub,
 				Type:    "eventMirroringService-error",
 			})
 
 			errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToFileService->Publish(): Error on publishing event (Topic: %s) to in-mem: %v", topicName, &types.Error{
-				Path:    "." + callerFunction + ".EventMirroringToFileService->Publish()",
+				Path:    "." + params.CallerFunction + ".EventMirroringToFileService->Publish()",
 				Message: errPubsub.Error(),
 				Error:   errPubsub,
 				Type:    "eventMirroringService-error",

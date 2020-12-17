@@ -15,10 +15,18 @@ type Event struct {
 	Message      string `json:"message"`
 }
 
+// PublishEventParams encapsulate parameters in publish event method
+type PublishEventParams struct {
+	TopicNames     []string
+	Body           []byte
+	Metadata       map[string]string
+	CallerFunction string
+}
+
 // EventMirroringServiceInterface represents the mirroring services for storing event data
 type EventMirroringServiceInterface interface {
 	Consume(ctx *context.Context, topicName string) (*Event, *types.Error)
 	IsExist(ctx *context.Context, event *Event) bool
-	Publish(ctx *context.Context, topicNames []string, body []byte, metadata map[string]string, callerFunction string) *types.Error
+	Publish(ctx *context.Context, params *PublishEventParams) *types.Error
 	Acknowledge(ctx *context.Context, event *Event) *types.Error
 }
