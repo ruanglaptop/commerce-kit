@@ -33,7 +33,7 @@ func (m *Manager) publishQueryModelEvents(ctx *context.Context) {
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 
 	for _, eventParams := range currentQueryModelEvents {
-		errPubsub := s.eventHandler.Publish(
+		errPubsub := m.eventHandler.Publish(
 			&backgroundContext,
 			eventParams,
 		)
