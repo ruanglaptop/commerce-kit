@@ -225,7 +225,7 @@ func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, even
 	input := &dynamodb.DeleteItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"serviceName": {
-				N: aws.String(s.serviceName),
+				S: aws.String(s.serviceName),
 			},
 			"topicName": {
 				S: aws.String(event.TopicName),
