@@ -87,5 +87,6 @@ func NewManager(
 	return &Manager{
 		db:                 db,
 		acknowledgeService: acknowledgeService,
+		eventHandler:       eventHandler,
 	}
 }
