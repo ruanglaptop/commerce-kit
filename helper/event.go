@@ -17,8 +17,8 @@ type Event struct {
 
 // EventKey event key
 type EventKey struct {
-	TopicName    string `json:"idempotentId"`
-	IdempotentID string `json:"topicName"`
+	TopicName    string `json:"topicName"`
+	IdempotentID string `json:"idempotentId"`
 }
 
 // PublishEventParams encapsulate parameters in publish event method
