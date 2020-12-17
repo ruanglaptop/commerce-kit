@@ -15,6 +15,12 @@ type Event struct {
 	Message      string `json:"message"`
 }
 
+// EventKey event key
+type EventKey struct {
+	TopicName    string `json:"idempotentId"`
+	IdempotentID string `json:"topicName"`
+}
+
 // PublishEventParams encapsulate parameters in publish event method
 type PublishEventParams struct {
 	TopicNames     []string
