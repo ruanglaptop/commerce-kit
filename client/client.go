@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"time"
 
+	"moul.io/http2curl"
+
 	"github.com/afex/hystrix-go/hystrix"
 	"github.com/go-redis/redis"
 	"github.com/payfazz/commerce-kit/appcontext"
@@ -267,6 +269,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 		defaultValue := 0
 		tempCurrentAccount = &defaultValue
 	}
+	command, _ := http2curl.GetCurlCommand(req)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
@@ -281,6 +284,7 @@ func (c *HTTPClient) CallClient(ctx *context.Context, path string, method Method
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
 			Response:       "{}",
+			CURL:           command.String(),
 		})
 	}
 
@@ -409,6 +413,8 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 		defaultValue := 0
 		tempCurrentAccount = &defaultValue
 	}
+
+	command, _ := http2curl.GetCurlCommand(req)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
@@ -423,6 +429,7 @@ func (c *HTTPClient) CallClientWithCaching(ctx *context.Context, path string, me
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
 			Response:       "{}",
+			CURL:           command.String(),
 		})
 	}
 
@@ -691,6 +698,8 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 		defaultValue := 0
 		tempCurrentAccount = &defaultValue
 	}
+
+	command, _ := http2curl.GetCurlCommand(req)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
@@ -705,6 +714,7 @@ func (c *HTTPClient) CallClientWithCachingInRedis(ctx *context.Context, duration
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
 			Response:       "{}",
+			CURL:           command.String(),
 		})
 	}
 
@@ -879,6 +889,8 @@ func (c *HTTPClient) CallClientWithCachingInRedisWithDifferentKey(ctx *context.C
 		defaultValue := 0
 		tempCurrentAccount = &defaultValue
 	}
+
+	command, _ := http2curl.GetCurlCommand(req)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	if method != GET {
@@ -893,6 +905,7 @@ func (c *HTTPClient) CallClientWithCachingInRedisWithDifferentKey(ctx *context.C
 			HTTPStatusCode: 0,
 			ReferenceID:    requestReferenceID,
 			Response:       "{}",
+			CURL:           command.String(),
 		})
 	}
 
@@ -1032,6 +1045,8 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 			defaultValue := 0
 			tempCurrentAccount = &defaultValue
 		}
+
+		command, _ := http2curl.GetCurlCommand(req)
 		requestReferenceID := appcontext.RequestReferenceID(ctx)
 		backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 		if method != GET {
@@ -1046,6 +1061,7 @@ func (c *HTTPClient) CallClientWithCircuitBreaker(ctx *context.Context, path str
 				HTTPStatusCode: 0,
 				ReferenceID:    requestReferenceID,
 				Response:       "{}",
+				CURL:           command.String(),
 			})
 		}
 
@@ -1292,6 +1308,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		tempCurrentAccount = &defaultValue
 	}
 
+	command, _ := http2curl.GetCurlCommand(req)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
@@ -1305,6 +1322,7 @@ func (c *HTTPClient) CallClientWithCustomizedError(ctx *context.Context, path st
 		HTTPStatusCode: 0,
 		ReferenceID:    requestReferenceID,
 		Response:       "{}",
+		CURL:           command.String(),
 	})
 
 	response, errDo := (func() (string, *ResponseError) {
@@ -1485,6 +1503,8 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 		defaultValue := 0
 		tempCurrentAccount = &defaultValue
 	}
+
+	command, _ := http2curl.GetCurlCommand(req)
 	requestReferenceID := appcontext.RequestReferenceID(ctx)
 	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
 	clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
@@ -1498,6 +1518,7 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 		HTTPStatusCode: 0,
 		ReferenceID:    requestReferenceID,
 		Response:       "{}",
+		CURL:           command.String(),
 	})
 
 	isAllowed, errClientCache := c.clientCacheService.IsClientNeedToBeCache(ctx, urlPath.String(), string(method))

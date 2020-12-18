@@ -27,6 +27,7 @@ type ClientRequestLog struct {
 	HTTPStatusCode int            `json:"httpStatusCode" db:"httpStatusCode"`
 	ReferenceID    int            `json:"referenceId" db:"referenceId"`
 	Response       string         `json:"response" db:"response"`
+	CURL           string         `json:"curl" db:"curl"`
 }
 
 // FindAllClientRequestLogs represents params to get All Client Request Logs
