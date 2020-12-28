@@ -95,6 +95,7 @@ type GenericHTTPClient interface {
 	CallClientWithBaseURLGiven(ctx *context.Context, url string, method Method, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCustomizedError(ctx *context.Context, path string, method Method, queryParams interface{}, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
 	CallClientWithCustomizedErrorAndCaching(ctx *context.Context, path string, method Method, queryParams interface{}, request interface{}, result interface{}, isAcknowledgeNeeded bool) *ResponseError
+	CallClientWithRequestInBytes(ctx *context.Context, path string, method Method, request []byte, result interface{}) *ResponseError
 	AddAuthentication(ctx *context.Context, authorizationType AuthorizationType)
 }
 
@@ -1729,6 +1730,114 @@ func (c *HTTPClient) CallClientWithCustomizedErrorAndCaching(ctx *context.Contex
 			ReservedHolderName: reflect.TypeOf(request).Elem().Name(),
 			Message:            "",
 		})
+	}
+
+	if response != "" && result != nil {
+		err = json.Unmarshal([]byte(response), result)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	return errDo
+}
+
+// CallClientWithRequestInBytes do call client with request in bytes and omit acknowledge process - specific case for consumer
+func (c *HTTPClient) CallClientWithRequestInBytes(ctx *context.Context, path string, method Method, request []byte, result interface{}) *ResponseError {
+	var jsonData []byte = request
+	var err error
+	var response string
+	var errDo *ResponseError
+
+	urlPath, err := url.Parse(fmt.Sprintf("%s/%s", c.APIURL, path))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	req, err := http.NewRequest(string(method), urlPath.String(), bytes.NewBuffer(jsonData))
+	if err != nil {
+		errDo = &ResponseError{
+			Error: err,
+		}
+		return errDo
+	}
+
+	for _, authorizationType := range c.AuthorizationTypes {
+		if authorizationType.HeaderType != "APIKey" {
+			req.Header.Add(authorizationType.HeaderName, fmt.Sprintf("%s%s", authorizationType.HeaderTypeValue, authorizationType.Token))
+		}
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	clientID, clientType := determineClient(ctx)
+	requestRaw := types.Metadata{}
+	if request != nil && request != "" {
+		err = json.Unmarshal(jsonData, &requestRaw)
+		if err != nil {
+			errDo = &ResponseError{
+				Error: err,
+			}
+			return errDo
+		}
+	}
+
+	clientRequestLog := &ClientRequestLog{}
+	tempCurrentAccount := appcontext.CurrentAccount(ctx)
+	if tempCurrentAccount == nil {
+		defaultValue := 0
+		tempCurrentAccount = &defaultValue
+	}
+	command, _ := http2curl.GetCurlCommand(req)
+
+	requestReferenceID := appcontext.RequestReferenceID(ctx)
+	backgroundContext := context.WithValue(context.Background(), appcontext.KeyCurrentAccount, *tempCurrentAccount)
+	if method != GET {
+		clientRequestLog = c.clientRequestLogStorage.Insert(&backgroundContext, &ClientRequestLog{
+			ClientID:       clientID,
+			ClientType:     clientType,
+			Method:         string(method),
+			URL:            urlPath.String(),
+			Header:         fmt.Sprintf("%v", req.Header),
+			Request:        requestRaw,
+			Status:         "calling",
+			HTTPStatusCode: 0,
+			ReferenceID:    requestReferenceID,
+			Response:       "{}",
+			CURL:           command.String(),
+		})
+	}
+
+	response, errDo = c.Do(req)
+	if errDo != nil && (errDo.Error != nil || errDo.Message != "") {
+		if method != GET {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+			clientRequestLog.Status = "failed"
+			clientRequestLog.Response = response
+			clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
+		}
+		return errDo
+	}
+
+	type TransactionID struct {
+		ID int `json:"id"`
+	}
+	var transactionID TransactionID
+	json.Unmarshal([]byte(response), &transactionID)
+
+	if method != GET {
+		clientRequestLog.TransactionID = transactionID.ID
+		if errDo != nil {
+			clientRequestLog.HTTPStatusCode = errDo.StatusCode
+		}
+		clientRequestLog.Status = "success"
+		clientRequestLog.Response = response
+		clientRequestLog = c.clientRequestLogStorage.Update(&backgroundContext, clientRequestLog)
 	}
 
 	if response != "" && result != nil {
