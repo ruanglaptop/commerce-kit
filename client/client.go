@@ -1777,7 +1777,7 @@ func (c *HTTPClient) CallClientWithRequestInBytes(ctx *context.Context, path str
 
 	clientID, clientType := determineClient(ctx)
 	requestRaw := types.Metadata{}
-	if request != nil && request != "" {
+	if request != nil && len(request) != 0 {
 		err = json.Unmarshal(jsonData, &requestRaw)
 		if err != nil {
 			errDo = &ResponseError{
