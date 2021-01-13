@@ -229,14 +229,14 @@ func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, even
 
 	eventInfo, errMarshal := dynamodbattribute.MarshalMap(eventKey)
 	if errMarshal != nil {
-		log.Printf(".EventMirroringToDynamoDBService->Acknowledge(): Error on publishing event (Topic: %s) to dynamodb: %v", event.TopicName, &types.Error{
+		log.Printf(".EventMirroringToDynamoDBService->Acknowledge(): Error on acknowledge event (Topic: %s) to dynamodb: %v", event.TopicName, &types.Error{
 			Path:    ".EventMirroringToDynamoDBService->Acknowledge()",
 			Message: errMarshal.Error(),
 			Error:   errMarshal,
 			Type:    "eventMirroringService-error",
 		})
 
-		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Publish(): Error on publishing event (Topic: %s) to dynamodb: %v", event.TopicName, &types.Error{
+		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Acknowledge(): Error on acknowledge event (Topic: %s) to dynamodb: %v", event.TopicName, &types.Error{
 			Path:    ".EventMirroringToDynamoDBService->Acknowledge()",
 			Message: errMarshal.Error(),
 			Error:   errMarshal,
