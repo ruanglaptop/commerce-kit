@@ -222,40 +222,16 @@ func (s *EventMirroringToDynamoDBService) IsExist(ctx *context.Context, event *h
 // Acknowledge acknowledge / remove event from dynamodb by idempotentId
 func (s *EventMirroringToDynamoDBService) Acknowledge(ctx *context.Context, event *helper.Event) *types.Error {
 	event.ServiceName = s.serviceName
-	eventKey := helper.EventKey{
-		IdempotentID: event.IdempotentID,
-		TopicName:    event.TopicName,
-	}
-
-	eventInfo, errMarshal := dynamodbattribute.MarshalMap(eventKey)
-	if errMarshal != nil {
-		log.Printf(".EventMirroringToDynamoDBService->Acknowledge(): Error on acknowledge event (Topic: %s) to dynamodb: %v", event.TopicName, &types.Error{
-			Path:    ".EventMirroringToDynamoDBService->Acknowledge()",
-			Message: errMarshal.Error(),
-			Error:   errMarshal,
-			Type:    "eventMirroringService-error",
-		})
-
-		errNotification := s.notifier.Notify(fmt.Sprintf(".EventMirroringToDynamoDBService->Acknowledge(): Error on acknowledge event (Topic: %s) to dynamodb: %v", event.TopicName, &types.Error{
-			Path:    ".EventMirroringToDynamoDBService->Acknowledge()",
-			Message: errMarshal.Error(),
-			Error:   errMarshal,
-			Type:    "eventMirroringService-error",
-		}))
-		if errNotification != nil {
-			log.Println(errNotification)
-		}
-
-		return &types.Error{
-			Path:    ".EventMirroringToDynamoDBService->Acknowledge()",
-			Message: errMarshal.Error(),
-			Error:   errMarshal,
-			Type:    "eventMirroringService-error",
-		}
-	}
 
 	input := &dynamodb.DeleteItemInput{
-		Key:       eventInfo,
+		Key: map[string]*dynamodb.AttributeValue{
+			"idempotentId": {
+				S: aws.String(event.IdempotentID),
+			},
+			"topicName": {
+				S: aws.String(event.TopicName),
+			},
+		},
 		TableName: aws.String(s.tableName),
 	}
 
