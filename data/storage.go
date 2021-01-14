@@ -1156,6 +1156,8 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 		dbTag := r.elemType.Field(i).Tag.Get("db")
 		if !emptyTag(dbTag) {
 			var typeMapString types.Metadata
+			var typeArrayString types.StringArray
+			var typeArrayInt types.IntArray
 			var val interface{}
 			var typeTime time.Time
 			var field reflect.Value
@@ -1177,6 +1179,16 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 					} else {
 						val = string(metadataBytes)
 					}
+				} else if field.Type() == reflect.TypeOf(typeArrayString) || field.Type() == reflect.TypeOf(typeArrayInt) {
+					arrayBytes, err := json.Marshal(field.Interface())
+					if err != nil {
+						val = "{}"
+					} else {
+						var arrayBytesStr string
+						arrayBytesStr = string(arrayBytes)
+						arrayBytesStr = fmt.Sprintf("{%s}", arrayBytesStr[1:len(arrayBytesStr)-1])
+						val = arrayBytesStr
+					}
 				} else {
 					val = field.Interface()
 				}
@@ -1192,6 +1204,12 @@ func (r *PostgresStorage) updateManyParams(currentUserID int, elem interface{}, 
 					res[dbTag] = val
 				} else if field.Type() == reflect.TypeOf(typeMapString) {
 					sqlStr += fmt.Sprintf(`cast(:%s%d as jsonb),`, dbTag, index)
+					res[dbTag] = val
+				} else if field.Type() == reflect.TypeOf(typeArrayString) {
+					sqlStr += fmt.Sprintf(`cast(:%s%d as text[]),`, dbTag, index)
+					res[dbTag] = val
+				} else if field.Type() == reflect.TypeOf(typeArrayInt) {
+					sqlStr += fmt.Sprintf(`cast(:%s%d as int[]),`, dbTag, index)
 					res[dbTag] = val
 				} else {
 					switch field.Kind() {
