@@ -2,7 +2,8 @@ package helper
 
 import "fmt"
 
-func translateDay(date string) string {
+// TranslateDay translate english day to bahasa indonesia day
+func TranslateDay(date string) string {
 	day := date[0:3]
 	switch day {
 	case "Mon":
