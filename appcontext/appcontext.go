@@ -92,6 +92,9 @@ const (
 
 	// KeyCurrentQueryModelEvents represents the current event going to be publish in query model
 	KeyCurrentQueryModelEvents contextKey = "KeyCurrentQueryModelEvents"
+
+	// KeyIsBuyer represents the current state of catalog user
+	KeyIsBuyer contextKey = "KeyIsBuyer"
 )
 
 // Owner gets the data owner from the context
@@ -400,4 +403,14 @@ func CurrentQueryModelEvents(ctx *context.Context) interface{} {
 		return v
 	}
 	return nil
+}
+
+// IsBuyer gets current state of catalog user
+func IsBuyer(ctx *context.Context) bool {
+	isBuyer := (*ctx).Value(KeyIsBuyer)
+	if isBuyer != nil {
+		v := isBuyer.(bool)
+		return v
+	}
+	return 0
 }
