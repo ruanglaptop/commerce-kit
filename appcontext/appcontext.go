@@ -412,5 +412,5 @@ func IsBuyer(ctx *context.Context) bool {
 		v := isBuyer.(bool)
 		return v
 	}
-	return 0
+	return true
 }
